@@ -1,22 +1,18 @@
-*
-!*/
+# Gradle & build output
+.gradle/
+build/
+**/build/
+out/
 
-!/.github/**/*.yml
-!/.idea/scopes/*_sources.xml
+# IDE
+.idea/
+*.iml
+.vscode/
+bin/
 
-!/gradle/wrapper/gradle-wrapper.jar
-!/gradle/wrapper/gradle-wrapper.properties
+# OS junk
+.DS_Store
+Thumbs.db
 
-!/**/build.gradle.kts
-!/**/src/**/*.*
-!/Data/main.py
-
-!/img/**/*.png
-
-!/.gitignore
-!/gradle.properties
-!/settings.gradle.kts
-!/gradlew
-!/gradlew.bat
-!/LICENSE
-!/README.md
+# Local Maven cache (optional – usually keep this out of git)
+local-maven/
