@@ -61,7 +61,7 @@ public final class Config
 
     private Config()
     {
-        this.enableWeatherCommand = new BoolValue(true);
+        this.enableWeatherCommand = new BoolValue(false);
 
         this.enableSnowAccumulationDuringWorldgen = new BoolValue(false);
         this.enableSnowAccumulationDuringWeather = new BoolValue(true);

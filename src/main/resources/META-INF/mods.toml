@@ -11,7 +11,7 @@ issueTrackerURL = "https://github.com/TitanForgeIndustries/Primal-Winter-Reimagi
     displayURL = "https://www.curseforge.com/minecraft/mc-mods/primal-winter-reimagined"
     logoFile = "logo.png"
     authors = "AlcatrazEscapee, GhostTapp"
-    description = '''A horrible accident has left the world - the entire world - a frozen wasteland. Unending snowstorms rage across the land, from forests, to plains, to jungles, to deserts. The air is thick with fog and wind howls across the landscape. Reimagined adds a configurable grace period before the eternal blizzard begins. Will you be able to survive in this primordial winter?'''
+    description = '''A reimagined take on Primal Winter that locks the world in a brutal, atmospheric blizzard with a configurable start day and enhanced snow, fog, and ambience.'''
 
 [[dependencies.primalwinter]]
     modId = "forge"
@@ -23,6 +23,6 @@ issueTrackerURL = "https://github.com/TitanForgeIndustries/Primal-Winter-Reimagi
 [[dependencies.primalwinter]]
     modId = "minecraft"
     mandatory = true
-    versionRange = "[1.20.1)"
+    versionRange = "[1.20.1, 1.21)"
     ordering = "NONE"
     side = "BOTH"
