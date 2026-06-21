@@ -1,0 +1,28 @@
+# Loader Metadata
+modLoader = "javafml"
+loaderVersion = "[47,)"
+license = "MIT"
+issueTrackerURL = "https://github.com/TitanForgeIndustries/Primal-Winter-Reimagined/issues"
+
+[[mods]]
+    modId = "primalwinter"
+    version = "${file.jarVersion}"
+    displayName = "Primal Winter: Reimagined"
+    displayURL = "https://www.curseforge.com/minecraft/mc-mods/primal-winter-reimagined"
+    logoFile = "logo.png"
+    authors = "AlcatrazEscapee, GhostTapp"
+    description = '''A horrible accident has left the world - the entire world - a frozen wasteland. Unending snowstorms rage across the land, from forests, to plains, to jungles, to deserts. The air is thick with fog and wind howls across the landscape. Reimagined adds a configurable grace period before the eternal blizzard begins. Will you be able to survive in this primordial winter?'''
+
+[[dependencies.primalwinter]]
+    modId = "forge"
+    mandatory = true
+    versionRange = "[47,)"
+    ordering = "NONE"
+    side = "BOTH"
+
+[[dependencies.primalwinter]]
+    modId = "minecraft"
+    mandatory = true
+    versionRange = "[1.20.1)"
+    ordering = "NONE"
+    side = "BOTH"
