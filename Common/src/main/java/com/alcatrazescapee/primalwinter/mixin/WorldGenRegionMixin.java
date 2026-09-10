@@ -1,39 +1,45 @@
 package com.alcatrazescapee.primalwinter.mixin;
 
 import java.util.function.Supplier;
-import com.alcatrazescapee.primalwinter.util.Config;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.WorldGenRegion;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 import com.alcatrazescapee.primalwinter.blocks.PrimalWinterBlocks;
 import com.alcatrazescapee.primalwinter.util.Helpers;
+import com.alcatrazescapee.primalwinter.util.WeatherHelper;
 
 @Mixin(WorldGenRegion.class)
 public abstract class WorldGenRegionMixin
 {
     @Shadow @Final private ServerLevel level;
 
-    @ModifyVariable(method = "setBlock", at = @At("HEAD"), argsOnly = true, ordinal = 0)
-    private BlockState replaceAllBlocksWithSnowyOnes(BlockState stateIn)
+    @Redirect(
+        method = "setBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;II)Z",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/chunk/ChunkAccess;setBlockState(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)Lnet/minecraft/world/level/block/state/BlockState;")
+    )
+    private BlockState replaceTreeBlocksInWinterBiomes(ChunkAccess chunk, BlockPos pos, BlockState stateIn, boolean moved)
     {
-        if (!Config.INSTANCE.isWinterDimension(level.dimension()))
+        // Tree/log replacement is another winter-worldgen path; it must not alter a pre-start
+        // chunk even though the biome modifier is attached during datapack loading.
+        if (!WeatherHelper.isWinterActive(level) || !WeatherHelper.isWinterBiome(level, pos))
         {
-            return stateIn;
+            return chunk.setBlockState(pos, stateIn, moved);
         }
         final Supplier<Block> block = PrimalWinterBlocks.SNOWY_TREE_BLOCKS.get(stateIn.getBlock());
         if (block == null)
         {
-            return stateIn;
+            return chunk.setBlockState(pos, stateIn, moved);
         }
         final BlockState replacementState = block.get().defaultBlockState();
-        return Helpers.copyProperties(stateIn, replacementState);
+        return chunk.setBlockState(pos, Helpers.copyProperties(stateIn, replacementState), moved);
     }
 }

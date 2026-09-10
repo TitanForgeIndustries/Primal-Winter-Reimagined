@@ -12,17 +12,9 @@ pluginManagement {
         exclusiveMaven("https://maven.parchmentmc.org") {
             includeGroupByRegex("org\\.parchmentmc.*")
         }
-        exclusiveMaven("https://maven.fabricmc.net/") {
-            includeGroup("net.fabricmc")
-            includeGroup("fabric-loom")
-        }
         exclusiveMaven("https://repo.spongepowered.org/repository/maven-public/") {
             includeGroupByRegex("org\\.spongepowered.*")
         }
-        exclusiveMaven("https://alcatrazescapee.jfrog.io/artifactory/mods") {
-            includeGroupByRegex("com\\.alcatrazescapee.*")
-        }
-
         gradlePluginPortal()
     }
     resolutionStrategy {
@@ -34,5 +26,8 @@ pluginManagement {
     }
 }
 
-rootProject.name = "PrimalWinter-1.20"
-include("Common", "Forge")
+rootProject.name = "PrimalWinter-1.20.1"
+// This distribution targets Forge.  The shared sources are added to the Forge
+// source set directly so Gradle does not try to run the obsolete vanilla
+// compiler pipeline from the archived Common project.
+include("Forge")

@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.alcatrazescapee.primalwinter.mixin.client",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "ParticleRainVersionUtilMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  },
+  "refmap": "primalwinter.refmap.json"
+}

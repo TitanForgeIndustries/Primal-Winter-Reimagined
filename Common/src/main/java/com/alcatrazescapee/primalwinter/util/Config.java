@@ -53,8 +53,8 @@ public final class Config
     public final BoolValue weatherRenderChanges;
     public final BoolValue skyRenderChanges;
 
-    private Set<ResourceLocation> nonWinterBiomes;
-    private Set<ResourceKey<Level>> nonWinterDimensions;
+    private volatile Set<ResourceLocation> nonWinterBiomes;
+    private volatile Set<ResourceKey<Level>> nonWinterDimensions;
 
     /** Installed by the active loader to copy parsed config values into the holders above. */
     public Runnable onLoad = () -> {};
@@ -139,7 +139,7 @@ public final class Config
                 LOGGER.warn("Ignoring invalid biome id in nonWinterBiomes config: '{}'", id);
             }
         }
-        this.nonWinterBiomes = set;
+        this.nonWinterBiomes = Set.copyOf(set);
     }
 
     /**
@@ -161,12 +161,12 @@ public final class Config
                 LOGGER.warn("Ignoring invalid dimension id in nonWinterDimensions config: '{}'", id);
             }
         }
-        this.nonWinterDimensions = set;
+        this.nonWinterDimensions = Set.copyOf(set);
     }
 
     public static final class BoolValue implements BooleanSupplier
     {
-        private boolean value;
+        private volatile boolean value;
 
         public BoolValue(boolean defaultValue) { this.value = defaultValue; }
 
@@ -178,7 +178,7 @@ public final class Config
 
     public static final class IntValue implements IntSupplier
     {
-        private int value;
+        private volatile int value;
 
         public IntValue(int defaultValue) { this.value = defaultValue; }
 
@@ -190,7 +190,7 @@ public final class Config
 
     public static final class FloatValue
     {
-        private float value;
+        private volatile float value;
 
         public FloatValue(float defaultValue) { this.value = defaultValue; }
 

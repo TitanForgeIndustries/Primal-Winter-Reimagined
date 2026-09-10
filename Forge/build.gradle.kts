@@ -2,7 +2,7 @@ plugins {
     java
     idea
     id("com.github.johnrengelman.shadow") version "7.1.2"
-    id("net.minecraftforge.gradle") version "5.1.+"
+    id("net.minecraftforge.gradle") version "[6.0,6.2)"
     id("org.spongepowered.mixin") version "0.7-SNAPSHOT"
     id("org.parchmentmc.librarian.forgegradle") version "1.+"
 }
@@ -16,7 +16,6 @@ val minecraftVersion: String by extra
 val forgeVersion: String by extra
 val parchmentVersion: String by extra
 val parchmentMinecraftVersion: String by extra
-val epsilonVersion: String by extra
 
 val shadowLibrary: Configuration by configurations.creating
 
@@ -29,23 +28,11 @@ base {
 }
 
 repositories {
-    fun exclusiveMaven(url: String, filter: Action<InclusiveRepositoryContentDescriptor>) =
-        exclusiveContent {
-            forRepository { maven(url) }
-            filter(filter)
-        }
-
-    exclusiveMaven("https://alcatrazescapee.jfrog.io/artifactory/mods") { includeGroup("com.alcatrazescapee") }
-    exclusiveMaven("https://maven.parchmentmc.org") { includeGroupByRegex("org\\.parchmentmc.*") }
+    maven("https://maven.parchmentmc.org")
 }
 
 dependencies {
     "minecraft"(group = "net.minecraftforge", name = "forge", version = "${minecraftVersion}-${forgeVersion}")
-
-    minecraftLibrary(group = "com.alcatrazescapee", name = "epsilon", version = epsilonVersion) { isTransitive = false }
-    shadowLibrary(group = "com.alcatrazescapee", name = "epsilon", version = epsilonVersion)
-
-    implementation(project(":Common"))
 
     if (System.getProperty("idea.sync.active") != "true") {
         annotationProcessor(group = "org.spongepowered", name = "mixin", version = "0.8.5", classifier = "processor")
@@ -57,14 +44,12 @@ minecraft {
 
     runs {
         all {
-            args("-mixin.config=$modId.mixins.json")
             property("forge.logging.console.level", "debug")
             ideaModule("${project.name}.test")
             workingDirectory("run")
 
             mods.create(modId) {
                 source(sourceSets.main.get())
-                source(project(":Common").sourceSets.main.get())
             }
         }
 
@@ -75,11 +60,21 @@ minecraft {
     }
 }
 
+// ForgeGradle does not create a configured run directory before JavaExec starts.  Creating it
+// here keeps runClient/runServer usable from a fresh checkout and avoids a platform-specific
+// CreateProcess failure before Minecraft has a chance to report a real startup error.
+tasks.withType<JavaExec>().configureEach {
+    doFirst {
+        workingDir.mkdirs()
+    }
+}
+
 mixin {
     add(sourceSets.main.get(), "${modId}.refmap.json")
 
     config("${modId}.mixins.json")
     config("${modId}.common.mixins.json")
+    config("${modId}.particlerain.mixins.json")
 }
 
 // Creates the 'reobfShadowJar' task
@@ -101,8 +96,14 @@ tasks.register("invalidateJavaForRefmap") {
 }
 
 tasks.withType<JavaCompile> {
-    source(project(":Common").sourceSets.main.get().allSource)
     shouldRunAfter(tasks.named("invalidateJavaForRefmap"))
+}
+
+sourceSets {
+    main {
+        java.srcDir("../Common/src/main/java")
+        resources.srcDir("../Common/src/main/resources")
+    }
 }
 
 tasks {
@@ -119,7 +120,6 @@ tasks {
                 moduleGroup != modGroup
             })))
         }
-        relocate("com.alcatrazescapee.epsilon", "${modGroup}.${modId}.epsilon")
         finalizedBy("reobfShadowJar")
     }
 
@@ -127,9 +127,6 @@ tasks {
         dependsOn(shadowJar)
     }
 
-    processResources {
-        from(project(":Common").sourceSets.main.get().resources)
-    }
 }
 
 idea {

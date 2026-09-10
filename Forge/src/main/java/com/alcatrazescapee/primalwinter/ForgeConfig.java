@@ -47,7 +47,7 @@ public final class ForgeConfig
 
         ENABLE_WEATHER_COMMAND = builder
                 .comment("If false, disables the vanilla /weather command.")
-                .define("enableWeatherCommand", true);
+                .define("enableWeatherCommand", false);
 
         ENABLE_SNOW_ACCUMULATION_WORLDGEN = builder
                 .comment(

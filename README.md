@@ -18,7 +18,7 @@ One of the core mods to the Everlasting Winter Modpack
 ## Delayed Winter Start
 
 Use the early days to gather resources and establish a foothold.
-After the configured snowStartDay, the world locks into an endless blizzard: heavy snow, frozen landscapes, and a constant sense of encroaching cold.
+Before the configured snowStartDay, Primal Winter leaves normal terrain, biome climate, vanilla precipitation, and the client atmosphere alone (apart from its configured clear-weather grace period). At the exact start tick, the world locks into an endless blizzard: heavy snow, frozen landscapes, and a constant sense of encroaching cold.
 Eternal Snowstorms (Post–Start Day)
 
 Once winter “starts,” the overworld is locked in permanent snowy weather.
@@ -53,8 +53,7 @@ You can tune the experience from “subtle cold shift” to “white-out apocaly
 # 🧭 Gameplay Notes
  
 
-The terrain is still generated in a wintry state (frozen world, cold biomes), because that’s baked into how Primal Winter reshapes the overworld.
-The true storm – constant snow, extra accumulation, heavier ambience – is what’s delayed until snowStartDay.
+New chunks generated before the start day use normal Minecraft world generation. New chunks generated after the start day receive Primal Winter’s gated snow, ice, and terrain features; existing chunks are never regenerated when winter begins. The true storm – constant snow, extra accumulation, heavier ambience, and winter visuals – starts from the same server/world-time boundary.
 This works especially well in hardcore/survival worlds where you want:
 A brief grace period to gear up.
 Then a permanent, escalating survival challenge once the storm hits.
@@ -67,8 +66,22 @@ Then a permanent, escalating survival challenge once the storm hits.
 
 Minecraft: 1.20.1
 Loader: Forge
+Forge version: 47.4.10
+Java: 17 or newer (the Gradle build uses the Minecraft 1.20.1 toolchain)
 Designed to be used in the Everlasting Winter modpack
 (If you’re using heavy worldgen or weather mods, test first to make sure their changes play nicely with the eternal winter behavior.)
+
+## Building from source
+
+The repository currently publishes the Forge distribution only. From a checkout with Java 17
+available, run:
+
+```text
+./gradlew clean build
+```
+
+The release jar is written to `Forge/build/libs/`. A detailed audit matrix and the limits of the
+runtime verification are recorded in [AUDIT.md](AUDIT.md).
 
 # 📜 Credits & Permissions
  

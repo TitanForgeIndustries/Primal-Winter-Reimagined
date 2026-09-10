@@ -39,6 +39,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.alcatrazescapee.primalwinter.client.PrimalWinterAmbience;
 import com.alcatrazescapee.primalwinter.util.Config;
+import com.alcatrazescapee.primalwinter.util.WeatherHelper;
 
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererMixin
@@ -52,12 +53,17 @@ public abstract class LevelRendererMixin
 
     private int windSoundTime;
 
-    @Redirect(method = "renderSnowAndRain", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/biome/Biome;getPrecipitationAt(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/biome/Biome$Precipitation;"))
-    private Biome.Precipitation alwaysUseRainRendering(Biome biome, BlockPos pos)
+    @Redirect(method = {"renderSnowAndRain", "tickRain"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/biome/Biome;getPrecipitationAt(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/biome/Biome$Precipitation;"))
+    private Biome.Precipitation useWinterSnowRendering(Biome biome, BlockPos pos)
     {
-        if (Config.INSTANCE.weatherRenderChanges.getAsBoolean())
+        if (Config.INSTANCE.weatherRenderChanges.getAsBoolean()
+                && this.level != null
+                && WeatherHelper.canSnowAt(this.level, pos))
         {
-            return Biome.Precipitation.RAIN;
+            // Vanilla's renderSnowAndRain method selects the actual precipitation geometry and
+            // texture from this enum.  Use the same context-aware overlay used by server weather
+            // and the optional Particle Rain compatibility hook.
+            return WeatherHelper.getPrecipitation(this.level, biome, pos);
         }
         return biome.getPrecipitationAt(pos);
     }
@@ -66,10 +72,12 @@ public abstract class LevelRendererMixin
     private int getAdjustedLightColorForSnow(BlockAndTintGetter level, BlockPos pos)
     {
         final int packedLight = LevelRenderer.getLightColor(level, pos);
-        if (Config.INSTANCE.weatherRenderChanges.getAsBoolean())
+        if (Config.INSTANCE.weatherRenderChanges.getAsBoolean()
+                && this.level != null
+                && WeatherHelper.canSnowAt(this.level, pos))
         {
             // Adjusts the light color via a heuristic that mojang uses to make snow appear more white
-            // This targets both paths, but since we always use the rain rendering, it's fine.
+            // This keeps the snow path bright after the precipitation enum is redirected.
             final int lightU = packedLight & 0xffff;
             final int lightV = (packedLight >> 16) & 0xffff;
             final int brightLightU = (lightU * 3 + 240) / 4;
@@ -82,7 +90,9 @@ public abstract class LevelRendererMixin
     @Inject(method = "renderSnowAndRain", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/BufferBuilder;begin(Lcom/mojang/blaze3d/vertex/VertexFormat$Mode;Lcom/mojang/blaze3d/vertex/VertexFormat;)V"))
     private void overrideWithSnowTextures(LightTexture lightTexture, float partialTick, double x, double y, double z, CallbackInfo ci)
     {
-        if (Config.INSTANCE.weatherRenderChanges.getAsBoolean())
+        if (Config.INSTANCE.weatherRenderChanges.getAsBoolean()
+                && level != null
+                && WeatherHelper.canSnowAt(level, minecraft.gameRenderer.getMainCamera().getBlockPosition()))
         {
             RenderSystem.setShaderTexture(0, SNOW_LOCATION);
         }
@@ -92,13 +102,19 @@ public abstract class LevelRendererMixin
     private int modifySnowAmount(int constant)
     {
         // This constant is used to control how much snow is rendered - 5 with default, 10 with fancy graphics. By default, we bump this all the way to 15.
-        return Config.INSTANCE.snowDensity.getAsInt();
+        return Config.INSTANCE.weatherRenderChanges.getAsBoolean()
+                && level != null
+                && WeatherHelper.canSnowAt(level, minecraft.gameRenderer.getMainCamera().getBlockPosition())
+                ? Config.INSTANCE.snowDensity.getAsInt()
+                : constant;
     }
 
     @Inject(method = "tickRain", at = @At("HEAD"))
     private void addExtraSnowParticlesAndSounds(Camera camera, CallbackInfo ci)
     {
-        if (!Config.INSTANCE.snowSounds.getAsBoolean())
+        if (!Config.INSTANCE.snowSounds.getAsBoolean()
+                && level != null
+                && WeatherHelper.isSnowingAt(level, camera.getBlockPosition()))
         {
             // Prevent default rain/snow sounds by setting rainSoundTime to -1, which means the if() checking it will never pass
             rainSoundTime = -1;
@@ -115,8 +131,10 @@ public abstract class LevelRendererMixin
             for (int i = 0; i < particleCount; ++i)
             {
                 final BlockPos randomPos = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, cameraPos.offset(random.nextInt(21) - 10, 0, random.nextInt(21) - 10));
-                final Biome biome = level.getBiome(randomPos).value();
-                if (randomPos.getY() > level.getMinBuildHeight() && randomPos.getY() <= cameraPos.getY() + 10 && randomPos.getY() >= cameraPos.getY() - 10 && biome.coldEnoughToSnow(randomPos)) // Change: use SNOW and coldEnoughToSnow() instead
+                if (randomPos.getY() > level.getMinBuildHeight()
+                        && randomPos.getY() <= cameraPos.getY() + 10
+                        && randomPos.getY() >= cameraPos.getY() - 10
+                        && WeatherHelper.isSnowingAt(level, randomPos))
                 {
                     pos = randomPos.below();
                     if (minecraft.options.particles().get() == ParticleStatus.MINIMAL)
@@ -154,7 +172,7 @@ public abstract class LevelRendererMixin
                 final BlockPos playerPos = camera.getBlockPosition();
                 final Entity entity = camera.getEntity();
                 int light = camera.getEntity().level().getBrightness(LightLayer.SKY, playerPos);
-                if (light > 3 && entity.level().isRaining() && entity.level().getBiome(playerPos).value().coldEnoughToSnow(playerPos))
+                if (light > 3 && WeatherHelper.isSnowingAt(entity.level(), playerPos))
                 {
                     // In a windy location, play wind sounds
                     float volumeModifier = 0.2f + (light - 3) * 0.01f;

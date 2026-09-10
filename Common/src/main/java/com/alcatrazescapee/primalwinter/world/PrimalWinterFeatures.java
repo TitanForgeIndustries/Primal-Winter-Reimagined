@@ -6,7 +6,6 @@ import com.mojang.serialization.Codec;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.levelgen.feature.DiskFeature;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.configurations.DiskConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.FeatureConfiguration;
@@ -24,7 +23,7 @@ public final class PrimalWinterFeatures
 
     public static final RegistryHolder<ImprovedFreezeTopLayerFeature> FREEZE_TOP_LAYER = register("freeze_top_layer", ImprovedFreezeTopLayerFeature::new, NoneFeatureConfiguration.CODEC);
     public static final RegistryHolder<ImprovedIceSpikeFeature> ICE_SPIKES = register("ice_spikes", ImprovedIceSpikeFeature::new, NoneFeatureConfiguration.CODEC);
-    public static final RegistryHolder<DiskFeature> DISK = register("disk", DiskFeature::new, DiskConfiguration.CODEC);
+    public static final RegistryHolder<ImprovedDiskFeature> DISK = register("disk", ImprovedDiskFeature::new, DiskConfiguration.CODEC);
 
     private static <C extends FeatureConfiguration, F extends Feature<C>> RegistryHolder<F> register(String name, Function<Codec<C>, F> feature, Codec<C> codec)
     {

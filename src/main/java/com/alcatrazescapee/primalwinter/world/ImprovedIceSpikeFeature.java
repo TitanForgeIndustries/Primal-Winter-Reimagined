@@ -10,6 +10,8 @@ import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.IceSpikeFeature;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
+import com.alcatrazescapee.primalwinter.util.WeatherHelper;
+
 /**
  * The standard ice spike feature does not place unless it encounters a snow block. This avoids that restriction.
  */
@@ -25,6 +27,10 @@ public class ImprovedIceSpikeFeature extends IceSpikeFeature
     {
         final WorldGenLevel level = context.level();
         BlockPos pos = context.origin();
+        if (!WeatherHelper.isWinterActive(level.getLevel()) || !WeatherHelper.canSnowAt(level.getLevel(), pos))
+        {
+            return false;
+        }
         while (level.isEmptyBlock(pos) && pos.getY() > level.getMinBuildHeight() + 2)
         {
             pos = pos.below();

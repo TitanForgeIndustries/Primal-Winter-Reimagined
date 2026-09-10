@@ -5,17 +5,6 @@ plugins {
 
 // From gradle.properties
 val minecraftVersion: String by extra
-val epsilonVersion: String by extra
-
-repositories {
-    fun exclusiveMaven(url: String, filter: Action<InclusiveRepositoryContentDescriptor>) =
-        exclusiveContent {
-            forRepository { maven(url) }
-            filter(filter)
-        }
-
-    exclusiveMaven("https://alcatrazescapee.jfrog.io/artifactory/mods") { includeGroup("com.alcatrazescapee") }
-}
 
 minecraft {
     version(minecraftVersion)
@@ -23,5 +12,4 @@ minecraft {
 
 dependencies {
     compileOnly(group = "org.spongepowered", name = "mixin", version = "0.8.5")
-    compileOnly(group = "com.alcatrazescapee", name = "epsilon", version = epsilonVersion)
 }

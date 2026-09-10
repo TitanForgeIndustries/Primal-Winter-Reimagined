@@ -1,19 +1,12 @@
 package com.alcatrazescapee.primalwinter.world;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Vec3i;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
-import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoublePlantBlock;
@@ -29,6 +22,7 @@ import net.minecraft.world.level.material.Fluids;
 
 import com.alcatrazescapee.primalwinter.blocks.PrimalWinterBlocks;
 import com.alcatrazescapee.primalwinter.util.Config;
+import com.alcatrazescapee.primalwinter.util.WeatherHelper;
 
 
 public class ImprovedFreezeTopLayerFeature extends Feature<NoneFeatureConfiguration>
@@ -42,17 +36,23 @@ public class ImprovedFreezeTopLayerFeature extends Feature<NoneFeatureConfigurat
     public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context)
     {
         final WorldGenLevel level = context.level();
+        if (!WeatherHelper.isWinterActive(level.getLevel()))
+        {
+            return false;
+        }
         final BlockPos pos = context.origin();
         final BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
 
 
         // First, find the highest and lowest exposed y pos in the chunk
-        int maxY = 0;
+        final int minY = level.getMinBuildHeight();
+        int maxY = minY;
         for (int x = 0; x < 16; ++x)
         {
             for (int z = 0; z < 16; ++z)
             {
                 int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, pos.getX() + x, pos.getZ() + z);
+                y = Math.min(level.getMaxBuildHeight() - 1, y);
                 if (maxY < y)
                 {
                     maxY = y;
@@ -62,8 +62,10 @@ public class ImprovedFreezeTopLayerFeature extends Feature<NoneFeatureConfigurat
 
         // Then, step downwards, tracking the exposure to sky at each step
         int[] skyLights = new int[16 * 16], prevSkyLights = new int[16 * 16];
+        final int[] lightQueue = new int[16 * 16];
+        final boolean[] queued = new boolean[16 * 16];
         Arrays.fill(prevSkyLights, 7);
-        for (int y = maxY; y >= 0; y--)
+        for (int y = maxY; y >= minY; y--)
         {
             for (int x = 0; x < 16; ++x)
             {
@@ -76,7 +78,7 @@ public class ImprovedFreezeTopLayerFeature extends Feature<NoneFeatureConfigurat
                     {
                         // Continue skylight downwards
                         skyLights[x + 16 * z] = prevSkyLights[x + 16 * z];
-                        extendSkyLights(skyLights, x, z);
+                        extendSkyLights(skyLights, x, z, lightQueue, queued);
                     }
                     if (skyLight > 0)
                     {
@@ -110,28 +112,36 @@ public class ImprovedFreezeTopLayerFeature extends Feature<NoneFeatureConfigurat
     /**
      * Simple BFS that extends a skylight source outwards within the array
      */
-    private void extendSkyLights(int[] skyLights, int startX, int startZ)
+    private void extendSkyLights(int[] skyLights, int startX, int startZ, int[] positions, boolean[] queued)
     {
-        final List<Vec3i> positions = new ArrayList<>();
-        final Set<Vec3i> visited = new HashSet<>();
-        positions.add(new Vec3i(startX, skyLights[startX + 16 * startZ], startZ));
-        visited.add(new Vec3i(startX, 0, startZ));
-        while (!positions.isEmpty())
+        if (skyLights[startX + 16 * startZ] <= 1)
         {
-            final Vec3i position = positions.remove(0);
+            return;
+        }
+        Arrays.fill(queued, false);
+        int head = 0;
+        int tail = 0;
+        final int start = startX + 16 * startZ;
+        positions[tail++] = start;
+        queued[start] = true;
+        while (head < tail)
+        {
+            final int position = positions[head++];
+            final int positionX = position % 16;
+            final int positionZ = position / 16;
             for (Direction direction : Direction.Plane.HORIZONTAL)
             {
-                final int nextX = position.getX() + direction.getStepX();
-                final int nextZ = position.getZ() + direction.getStepZ();
-                final int nextSkyLight = position.getY() - 1;
+                final int nextX = positionX + direction.getStepX();
+                final int nextZ = positionZ + direction.getStepZ();
+                final int nextSkyLight = skyLights[position] - 1;
                 if (nextX >= 0 && nextX < 16 && nextZ >= 0 && nextZ < 16 && skyLights[nextX + 16 * nextZ] < nextSkyLight)
                 {
-                    final Vec3i nextVisited = new Vec3i(nextX, 0, nextZ);
-                    if (!visited.contains(nextVisited))
+                    final int next = nextX + 16 * nextZ;
+                    skyLights[next] = nextSkyLight;
+                    if (!queued[next])
                     {
-                        skyLights[nextX + 16 * nextZ] = nextSkyLight;
-                        positions.add(new Vec3i(nextX, nextSkyLight, nextZ));
-                        visited.add(nextVisited);
+                        positions[tail++] = next;
+                        queued[next] = true;
                     }
                 }
             }
@@ -140,8 +150,7 @@ public class ImprovedFreezeTopLayerFeature extends Feature<NoneFeatureConfigurat
 
     private void placeSnowAndIce(WorldGenLevel level, BlockPos pos, BlockState state, RandomSource random, int skyLight)
     {
-        final Biome biome = level.getBiome(pos).value();
-        if (!biome.coldEnoughToSnow(pos))
+        if (!WeatherHelper.canSnowAt(level.getLevel(), pos))
         {
             return;
         }

@@ -12,9 +12,9 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.FoliageColor;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
-import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FogType;
+import net.minecraft.resources.ResourceKey;
 
 import com.alcatrazescapee.primalwinter.blocks.PrimalWinterBlocks;
 import com.alcatrazescapee.primalwinter.platform.client.BlockColorCallback;
@@ -24,11 +24,13 @@ import com.alcatrazescapee.primalwinter.platform.client.ItemColorCallback;
 import com.alcatrazescapee.primalwinter.platform.client.ParticleProviderCallback;
 import com.alcatrazescapee.primalwinter.platform.client.XPlatformClient;
 import com.alcatrazescapee.primalwinter.util.Config;
+import com.alcatrazescapee.primalwinter.util.WeatherHelper;
 
 public final class ClientEventHandler
 {
     private static float prevFogDensity = -1f;
     private static long prevFogTick = -1L;
+    private static ResourceKey<Level> prevFogDimension;
 
     public static void setupClient()
     {
@@ -68,7 +70,10 @@ public final class ClientEventHandler
 
     public static void renderFogColors(Camera camera, float partialTick, FogColorCallback callback)
     {
-        if (camera.getEntity() instanceof Player player && camera.getFluidInCamera() == FogType.NONE && prevFogDensity > 0f)
+        if (camera.getEntity() instanceof Player player
+                && camera.getFluidInCamera() == FogType.NONE
+                && prevFogDensity > 0f
+                && WeatherHelper.isSnowingAt(player.level(), camera.getBlockPosition()))
         {
             // Calculate color based on time of day
             final float angle = player.level().getSunAngle(partialTick);
@@ -87,7 +92,23 @@ public final class ClientEventHandler
 
     public static void renderFogDensity(Camera camera, FogDensityCallback callback)
     {
-        if (camera.getEntity() instanceof Player player)
+        if (!(camera.getEntity() instanceof Player player))
+        {
+            prevFogDensity = -1f;
+            prevFogTick = -1L;
+            prevFogDimension = null;
+            return;
+        }
+
+        final Level level = player.level();
+        if (!level.dimension().equals(prevFogDimension))
+        {
+            prevFogDensity = -1f;
+            prevFogTick = -1L;
+            prevFogDimension = level.dimension();
+        }
+
+        final BlockPos cameraPos = camera.getBlockPosition();
         {
             final long thisTick = Util.getMillis();
             final boolean firstTick = prevFogTick == -1;
@@ -97,9 +118,7 @@ public final class ClientEventHandler
 
             float expectedFogDensity = 0f;
 
-            final Level level = player.level();
-            final Biome biome = level.getBiome(camera.getBlockPosition()).value();
-            if (level.isRaining() && biome.coldEnoughToSnow(camera.getBlockPosition()))
+            if (WeatherHelper.isSnowingAt(level, cameraPos))
             {
                 final int light = level.getBrightness(LightLayer.SKY, BlockPos.containing(player.getEyePosition()));
                 expectedFogDensity = Mth.clampedMap(light, 0f, 15f, 0f, 1f);

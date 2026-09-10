@@ -1,28 +1,28 @@
 # Loader Metadata
 modLoader = "javafml"
-loaderVersion = "[47,)"
+loaderVersion = "${forgeVersionRange}"
 license = "MIT"
-issueTrackerURL = "https://github.com/TitanForgeIndustries/Primal-Winter-Reimagined/issues"
+issueTrackerURL = "${modIssueUrl}"
 
 [[mods]]
     modId = "primalwinter"
-    version = "${file.jarVersion}"
-    displayName = "Primal Winter: Reimagined"
-    displayURL = "https://www.curseforge.com/minecraft/mc-mods/primal-winter-reimagined"
+    version = "${modVersion}"
+    displayName = "${modName}"
+    displayURL = "${modHomeUrl}"
     logoFile = "logo.png"
-    authors = "AlcatrazEscapee, GhostTapp"
-    description = '''A reimagined take on Primal Winter that locks the world in a brutal, atmospheric blizzard with a configurable start day and enhanced snow, fog, and ambience.'''
+    authors = "${modAuthor}"
+    description = "${modDescription}"
 
 [[dependencies.primalwinter]]
     modId = "forge"
     mandatory = true
-    versionRange = "[47,)"
+    versionRange = "${forgeVersionRange}"
     ordering = "NONE"
     side = "BOTH"
 
 [[dependencies.primalwinter]]
     modId = "minecraft"
     mandatory = true
-    versionRange = "[1.20.1, 1.21)"
+    versionRange = "${minecraftVersionRange}"
     ordering = "NONE"
     side = "BOTH"

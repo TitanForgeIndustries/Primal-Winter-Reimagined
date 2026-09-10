@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from mcresources import ResourceManager, utils
 from mcresources.type_definitions import JsonObject
 
@@ -10,16 +12,18 @@ def heightmap(heightmap: str): return 'minecraft:heightmap', {'heightmap': heigh
 
 def main():
     mod_id = 'primalwinter'
-    root_dir = '../%s/src/main/resources'
+    # Resolve paths from this script rather than the caller's current directory.
+    # The repository only ships the Forge distribution; the old Fabric output
+    # directory no longer exists and made data generation fail before producing
+    # any useful output.
+    resources_root = Path(__file__).resolve().parents[1]
+    forge = ResourceManager(mod_id, str(resources_root / 'Forge' / 'src' / 'main' / 'resources'))
+    common = ResourceManager(mod_id, str(resources_root / 'Common' / 'src' / 'main' / 'resources'))
+    each = (forge, common)
 
-    fabric = ResourceManager(mod_id, root_dir % 'Fabric')
-    forge = ResourceManager(mod_id, root_dir % 'Forge')
-    common = ResourceManager(mod_id, root_dir % 'Common')
-    each = (fabric, forge, common)
-
-    # Link tags and lang, generate them to common
-    fabric.lang_buffer = forge.lang_buffer = common.lang_buffer
-    fabric.tags_buffer = forge.tags_buffer = common.tags_buffer
+    # Link tags and language buffers so shared assets are written once to Common.
+    forge.lang_buffer = common.lang_buffer
+    forge.tags_buffer = common.tags_buffer
 
     for rm in each:
         utils.clean_generated_resources('/'.join(rm.resource_dir))

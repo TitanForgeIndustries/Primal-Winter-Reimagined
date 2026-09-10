@@ -15,13 +15,6 @@ val minecraftVersionRange: String by extra
 val forgeVersion: String by extra
 val forgeVersionRange: String by extra
 val parchmentVersion: String by extra
-val fabricVersion: String by extra
-val fabricVersionRange: String by extra
-val fabricLoaderVersion: String by extra
-val fabricLoaderVersionRange: String by extra
-val epsilonVersion: String by extra
-
-
 subprojects {
 
     version = modVersion
@@ -44,7 +37,7 @@ subprojects {
 
     // Apply properties from gradle.properties to mod specific files, meaning they don't need to be changed on version update.
     tasks.withType<ProcessResources> {
-        filesMatching(listOf("META-INF/mods.toml", "pack.mcmeta", "fabric.mod.json")) {
+        filesMatching(listOf("META-INF/mods.toml", "pack.mcmeta")) {
             expand(mapOf(
                 "modName" to modName,
                 "modAuthor" to modAuthor,
@@ -60,10 +53,6 @@ subprojects {
                 "minecraftVersionRange" to minecraftVersionRange,
                 "forgeVersion" to forgeVersion,
                 "forgeVersionRange" to forgeVersionRange,
-                "fabricVersion" to fabricVersion,
-                "fabricVersionRange" to fabricVersionRange,
-                "fabricLoaderVersion" to fabricLoaderVersion,
-                "fabricLoaderVersionRange" to fabricLoaderVersionRange,
             ))
         }
     }

@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
-import net.minecraft.data.worldgen.placement.MiscOverworldPlacements;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.biome.Biome;
@@ -14,12 +13,14 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.world.BiomeGenerationSettingsBuilder;
 import net.minecraftforge.common.world.BiomeModifier;
-import net.minecraftforge.common.world.ClimateSettingsBuilder;
 import net.minecraftforge.common.world.MobSpawnSettingsBuilder;
 import net.minecraftforge.common.world.ModifiableBiomeInfo;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.MobSpawnEvent;
 import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
@@ -29,6 +30,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import com.alcatrazescapee.primalwinter.platform.XPlatform;
 import com.alcatrazescapee.primalwinter.util.Config;
 import com.alcatrazescapee.primalwinter.util.EventHandler;
+import com.alcatrazescapee.primalwinter.util.WeatherHelper;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -57,6 +59,20 @@ public final class ForgePrimalWinter
 
         forgeBus.addListener((RegisterCommandsEvent event) -> EventHandler.registerCommands(event.getDispatcher()));
         forgeBus.addListener((LevelEvent.Load event) -> EventHandler.setLevelToThunder(event.getLevel()));
+        forgeBus.addListener((TickEvent.LevelTickEvent event) -> {
+            if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level)
+            {
+                EventHandler.tickWeatherState(level);
+            }
+        });
+        forgeBus.addListener((MobSpawnEvent.PositionCheck event) -> {
+            final EntityType<?> type = event.getEntity().getType();
+            if (!WeatherHelper.isWinterActive(event.getLevel().getLevel())
+                    && (type == EntityType.POLAR_BEAR || type == EntityType.STRAY))
+            {
+                event.setResult(Event.Result.DENY);
+            }
+        });
 
         if (XPlatform.INSTANCE.isDedicatedClient())
         {
@@ -74,23 +90,14 @@ public final class ForgePrimalWinter
                 return;
             }
 
-            final ClimateSettingsBuilder climate = builder.getClimateSettings();
-            climate.setHasPrecipitation(true);
-            climate.setTemperature(-0.5f);
-            climate.setTemperatureModifier(Biome.TemperatureModifier.NONE);
-
-            builder.getSpecialEffects()
-                .waterColor(0x3938C9)
-                .waterFogColor(0x050533);
-
+            // Biome modifiers have no Level/day context, so climate and special-effect metadata
+            // must remain untouched until runtime winter state is known.
             final BiomeGenerationSettingsBuilder settings = builder.getGenerationSettings();
             for (Holder<PlacedFeature> feature : surfaceStructures)
             {
                 settings.addFeature(GenerationStep.Decoration.SURFACE_STRUCTURES, feature);
             }
 
-            settings.getFeatures(GenerationStep.Decoration.TOP_LAYER_MODIFICATION)
-                .removeIf(holder -> holder.unwrapKey().map(key -> key == MiscOverworldPlacements.FREEZE_TOP_LAYER).orElse(false));
             for (Holder<PlacedFeature> feature : topLayerModification)
             {
                 settings.addFeature(GenerationStep.Decoration.TOP_LAYER_MODIFICATION, feature);

@@ -3,15 +3,14 @@ package com.alcatrazescapee.primalwinter.mixin.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.DimensionSpecialEffects;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.biome.Biome;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.alcatrazescapee.primalwinter.util.Config;
+import com.alcatrazescapee.primalwinter.util.WeatherHelper;
 
 @Mixin(DimensionSpecialEffects.class)
 public abstract class DimensionSpecialEffectsMixin
@@ -25,8 +24,7 @@ public abstract class DimensionSpecialEffectsMixin
         if (original != null && Config.INSTANCE.skyRenderChanges.getAsBoolean() && level != null)
         {
             final BlockPos pos = Minecraft.getInstance().gameRenderer.getMainCamera().getBlockPosition();
-            final Holder<Biome> biome = level.getBiome(pos);
-            if (biome.value().coldEnoughToSnow(pos) && ((Object) this) instanceof DimensionSpecialEffects.OverworldEffects)
+            if (WeatherHelper.isSnowingAt(level, pos))
             {
                 cir.setReturnValue(null);
             }

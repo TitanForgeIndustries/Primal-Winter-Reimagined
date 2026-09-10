@@ -3,6 +3,7 @@
 
 !/.github/**/*.yml
 !/.idea/scopes/*_sources.xml
+!/Forge/run/.gitkeep
 
 !/gradle/wrapper/gradle-wrapper.jar
 !/gradle/wrapper/gradle-wrapper.properties
@@ -20,3 +21,4 @@
 !/gradlew.bat
 !/LICENSE
 !/README.md
+!/AUDIT.md

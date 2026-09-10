@@ -11,7 +11,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LightLayer;
-import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -52,27 +51,18 @@ public final class EventHandler
      */
     public static void placeExtraSnow(ServerLevel level, ChunkAccess chunk)
     {
-        if (!Config.INSTANCE.isWinterDimension(level.dimension()))
+        if (!WeatherHelper.supportsWinterWeather(level))
         {
             return;
         }
 
-        final long currentDay = level.getDayTime() / 24000L;
-        if (currentDay < Config.INSTANCE.snowStartDay.getAsInt())
+        if (WeatherHelper.canControlWeather(level))
         {
-            // Grace period: keep the skies clear until the storm begins. Only re-assert when needed.
-            if (level.isRaining() || level.isThundering())
-            {
-                level.setWeatherParameters(Integer.MAX_VALUE, 0, false, false);
-            }
-            return;
+            applyWeatherState(level);
         }
-
-        // Eternal storm: lock the world into permanent thundering snow. Only re-assert when needed.
-        if (!level.isThundering())
+        if (!WeatherHelper.isWinterActive(level))
         {
-            level.setWeatherParameters(0, Integer.MAX_VALUE, true, true);
-            level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE).set(false, level.getServer());
+            return;
         }
 
         if (Config.INSTANCE.enableSnowAccumulationDuringWeather.getAsBoolean() && level.random.nextInt(16) == 0)
@@ -81,8 +71,7 @@ public final class EventHandler
             final int blockZ = chunk.getPos().getMinBlockZ();
             final BlockPos pos = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, level.getBlockRandomPos(blockX, 0, blockZ, 15));
             final BlockState state = level.getBlockState(pos);
-            final Biome biome = level.getBiome(pos).value();
-            if (level.isRaining() && biome.coldEnoughToSnow(pos) && level.getBrightness(LightLayer.BLOCK, pos) < 10)
+            if (WeatherHelper.isSnowingAt(level, pos) && level.getBrightness(LightLayer.BLOCK, pos) < 10)
             {
                 if (state.getBlock() == Blocks.SNOW)
                 {
@@ -107,13 +96,52 @@ public final class EventHandler
 
     public static void setLevelToThunder(LevelAccessor maybeLevel)
     {
-        if (maybeLevel instanceof ServerLevel level && Config.INSTANCE.isWinterDimension(level.dimension()))
+        if (maybeLevel instanceof ServerLevel level && WeatherHelper.canControlWeather(level))
         {
-            NewWorldSavedData.onlyForNewWorlds(level, () -> {
-                LOGGER.info("Modifying weather for world {}", level.dimension().location());
-                level.setWeatherParameters(0, Integer.MAX_VALUE, true, true);  // Copied from WeatherCommand
-                level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE).set(false, level.getServer());
-            });
+            LOGGER.info("Applying Primal Winter weather state for world {}", level.dimension().location());
+            applyWeatherState(level);
+        }
+    }
+
+    /**
+     * Keeps the server-authoritative weather state synchronized with the exact winter start day.
+     * This is deliberately level-tick driven rather than chunk-tick driven: a dedicated server
+     * can have loaded/force-loaded chunks without any player-ticking chunks, and the seasonal
+     * transition must still happen at the configured day boundary in that case.
+     */
+    public static void tickWeatherState(ServerLevel level)
+    {
+        if (WeatherHelper.canControlWeather(level))
+        {
+            applyWeatherState(level);
+        }
+    }
+
+    private static void applyWeatherState(ServerLevel level)
+    {
+        final boolean started = WeatherHelper.isWinterActive(level);
+        final GameRules.BooleanValue weatherCycle = level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE);
+        if (started)
+        {
+            if (!level.isThundering() || weatherCycle.get())
+            {
+                level.setWeatherParameters(0, Integer.MAX_VALUE, true, true);
+            }
+            if (weatherCycle.get())
+            {
+                weatherCycle.set(false, level.getServer());
+            }
+        }
+        else
+        {
+            if (level.isRaining() || level.isThundering())
+            {
+                level.setWeatherParameters(Integer.MAX_VALUE, 0, false, false);
+            }
+            if (!weatherCycle.get())
+            {
+                weatherCycle.set(true, level.getServer());
+            }
         }
     }
 }
