@@ -24,4 +24,6 @@ public interface XPlatform
     boolean isDedicatedClient();
 
     Path configDir();
+
+    boolean isModLoaded(String modId);
 }

@@ -27,7 +27,7 @@ public class ImprovedIceSpikeFeature extends IceSpikeFeature
     {
         final WorldGenLevel level = context.level();
         BlockPos pos = context.origin();
-        if (!WeatherHelper.isWinterActive(level.getLevel()) || !WeatherHelper.canSnowAt(level.getLevel(), pos))
+        if (!WeatherHelper.isWinterActive(level.getLevel()) || !WeatherHelper.isActiveWinterBiome(level.getLevel(), pos))
         {
             return false;
         }

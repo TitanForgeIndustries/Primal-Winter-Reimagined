@@ -4,6 +4,7 @@ import java.nio.file.Path;
 
 import net.minecraft.core.Registry;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLPaths;
 
@@ -19,6 +20,12 @@ public final class ForgePlatform implements XPlatform
     public boolean isDedicatedClient()
     {
         return FMLEnvironment.dist == Dist.CLIENT;
+    }
+
+    @Override
+    public boolean isModLoaded(String modId)
+    {
+        return ModList.get().isLoaded(modId);
     }
 
     @Override

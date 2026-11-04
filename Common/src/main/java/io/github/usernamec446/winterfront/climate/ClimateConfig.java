@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 
 import io.github.usernamec446.winterfront.util.StrictCodecs;
 import io.github.usernamec446.winterfront.WinterFront;
+import io.github.usernamec446.winterfront.compat.SeasonCompat;
 import io.github.usernamec446.winterfront.platform.XPlatform;
 
 /**
@@ -124,9 +125,15 @@ public record ClimateConfig(Mode mode, TemperatureMode temperatureMode, float te
         return !excludedBiomes.matches(biome);
     }
 
+    /** Whether a seasons mod decides how cold it is. Seasons change, so biomes must stay as they are. */
+    public boolean followsSeasons()
+    {
+        return mode == Mode.AUTO && SeasonCompat.isLoaded();
+    }
+
     public boolean rewritesClimate()
     {
-        return mode != Mode.OFF;
+        return mode != Mode.OFF && !followsSeasons();
     }
 
     public float temperatureFor(Holder<Biome> biome, float base)

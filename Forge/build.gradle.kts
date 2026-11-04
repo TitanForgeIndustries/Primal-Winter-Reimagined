@@ -29,10 +29,20 @@ base {
 
 repositories {
     maven("https://maven.parchmentmc.org")
+    maven("https://api.modrinth.com/maven") {
+        content { includeGroup("maven.modrinth") }
+    }
 }
 
 dependencies {
     "minecraft"(group = "net.minecraftforge", name = "forge", version = "${minecraftVersion}-${forgeVersion}")
+
+    // Only for testing compatibility in a dev run: gradlew runServer -PtestSeasons
+    if (project.hasProperty("testSeasons")) {
+        val fg = project.extensions.getByType<net.minecraftforge.gradle.userdev.DependencyManagementExtension>()
+        "runtimeOnly"(fg.deobf("maven.modrinth:serene-seasons:9.1.0.3"))
+        "runtimeOnly"(fg.deobf("maven.modrinth:glitchcore:0.0.1.1"))
+    }
 
     if (System.getProperty("idea.sync.active") != "true") {
         annotationProcessor(group = "org.spongepowered", name = "mixin", version = "0.8.5", classifier = "processor")
@@ -45,6 +55,8 @@ minecraft {
     runs {
         all {
             property("forge.logging.console.level", "debug")
+            property("mixin.env.remapRefMap", "true")
+            property("mixin.env.refMapRemappingFile", "${projectDir}/build/createSrgToMcp/output.srg")
             ideaModule("${project.name}.test")
             workingDirectory("run")
 
@@ -73,7 +85,6 @@ mixin {
     add(sourceSets.main.get(), "${modId}.refmap.json")
 
     config("${modId}.common.mixins.json")
-    config("${modId}.particlerain.mixins.json")
 }
 
 // Creates the 'reobfShadowJar' task

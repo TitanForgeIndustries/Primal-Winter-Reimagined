@@ -17,7 +17,7 @@ import net.minecraft.util.RandomSource;
 import io.github.usernamec446.winterfront.util.StrictCodecs;
 
 /** Weather schedule for one or more dimensions, loaded from config/winterfront/profiles/*.json. */
-public record StormProfile(List<ResourceLocation> dimensions, Mode mode, int firstStormDay, DayRange clearDays, boolean sleepSkipsStorm, List<StormType> stormTypes, SnowSettings snow, List<SnowSettings.BiomeRule> biomeRules, List<WinterMob> mobs)
+public record StormProfile(List<ResourceLocation> dimensions, Mode mode, int firstStormDay, DayRange clearDays, boolean sleepSkipsStorm, List<StormType> stormTypes, SnowSettings snow, List<SnowSettings.BiomeRule> biomeRules, List<WinterMob> mobs, SeasonSettings seasons)
 {
     public enum Mode
     {
@@ -52,7 +52,8 @@ public record StormProfile(List<ResourceLocation> dimensions, Mode mode, int fir
         StrictCodecs.optional(StormType.CODEC.listOf(), "stormTypes", List.of()).forGetter(StormProfile::stormTypes),
         StrictCodecs.optional(SnowSettings.CODEC, "snow", SnowSettings.DEFAULT).forGetter(StormProfile::snow),
         StrictCodecs.optional(SnowSettings.BiomeRule.LIST_CODEC, "biomeRules", List.of()).forGetter(StormProfile::biomeRules),
-        StrictCodecs.optional(WinterMob.CODEC.listOf(), "mobs", List.of()).forGetter(StormProfile::mobs)
+        StrictCodecs.optional(WinterMob.CODEC.listOf(), "mobs", List.of()).forGetter(StormProfile::mobs),
+        StrictCodecs.optional(SeasonSettings.CODEC, "seasons", SeasonSettings.DEFAULT).forGetter(StormProfile::seasons)
     ).apply(instance, StormProfile::new));
 
     public static final Codec<StormProfile> CODEC = BASE_CODEC.flatXmap(StormProfile::validate, DataResult::success);
@@ -73,7 +74,8 @@ public record StormProfile(List<ResourceLocation> dimensions, Mode mode, int fir
         List.of(
             new WinterMob(EntityType.POLAR_BEAR, MobCategory.CREATURE, 60, List.of(1, 3), false),
             new WinterMob(EntityType.STRAY, MobCategory.MONSTER, 60, List.of(1, 3), false)
-        )
+        ),
+        SeasonSettings.DEFAULT
     );
 
     private static DataResult<StormProfile> validate(StormProfile profile)

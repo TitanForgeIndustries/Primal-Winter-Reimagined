@@ -153,7 +153,7 @@ public class ImprovedFreezeTopLayerFeature extends Feature<NoneFeatureConfigurat
 
     private void placeSnowAndIce(WorldGenLevel level, BlockPos pos, BlockState state, RandomSource random, int skyLight)
     {
-        if (!WeatherHelper.canSnowAt(level.getLevel(), pos))
+        if (!WeatherHelper.isActiveWinterBiome(level.getLevel(), pos))
         {
             return;
         }

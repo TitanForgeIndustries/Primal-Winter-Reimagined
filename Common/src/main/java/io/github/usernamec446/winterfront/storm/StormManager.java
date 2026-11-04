@@ -6,6 +6,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.GameRules;
 import org.slf4j.Logger;
 
+import io.github.usernamec446.winterfront.climate.ClimateConfig;
+import io.github.usernamec446.winterfront.compat.SeasonCompat;
 import io.github.usernamec446.winterfront.util.WeatherHelper;
 
 /**
@@ -18,6 +20,7 @@ public final class StormManager
 
     public static void tick(ServerLevel level)
     {
+        SeasonCompat.update(level);
         final StormProfile profile = controllingProfile(level);
         if (profile == null)
         {
@@ -62,12 +65,12 @@ public final class StormManager
         final boolean eternal = profile.mode() == StormProfile.Mode.ETERNAL;
         switch (state.phase)
         {
-            case NONE, WAITING -> startStorm(level, profile, state, profile.randomStormType(level.random));
+            case NONE, WAITING -> nextPhase(level, profile, state);
             case CLEAR ->
             {
                 if (eternal || now >= state.endTick)
                 {
-                    startStorm(level, profile, state, profile.randomStormType(level.random));
+                    nextPhase(level, profile, state);
                 }
             }
             case STORM ->
@@ -89,6 +92,20 @@ public final class StormManager
                     startClear(level, profile, state);
                 }
             }
+        }
+    }
+
+    /** Starts a storm, unless the season's chance says that the clear spell goes on. */
+    private static void nextPhase(ServerLevel level, StormProfile profile, StormState state)
+    {
+        final boolean seasonal = profile.mode() == StormProfile.Mode.CYCLE && ClimateConfig.get().followsSeasons();
+        if (seasonal && level.random.nextFloat() >= profile.seasons().stormChanceIn(SeasonCompat.currentSeason(level)))
+        {
+            startClear(level, profile, state);
+        }
+        else
+        {
+            startStorm(level, profile, state, profile.randomStormType(level.random));
         }
     }
 

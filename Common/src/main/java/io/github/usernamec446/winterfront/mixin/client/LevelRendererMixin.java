@@ -1,18 +1,15 @@
 package io.github.usernamec446.winterfront.mixin.client;
 
 import java.util.Random;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.ParticleStatus;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
@@ -20,7 +17,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.LightLayer;
-import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -44,8 +40,6 @@ import io.github.usernamec446.winterfront.util.WeatherHelper;
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererMixin
 {
-    @Shadow @Final private static ResourceLocation SNOW_LOCATION;
-
     @Shadow private ClientLevel level;
     @Shadow @Final private Minecraft minecraft;
     @Shadow private int ticks;
@@ -53,28 +47,13 @@ public abstract class LevelRendererMixin
 
     private int windSoundTime;
 
-    @Redirect(method = {"renderSnowAndRain", "tickRain"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/biome/Biome;getPrecipitationAt(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/biome/Biome$Precipitation;"))
-    private Biome.Precipitation useWinterSnowRendering(Biome biome, BlockPos pos)
-    {
-        if (Config.INSTANCE.weatherRenderChanges.getAsBoolean()
-                && this.level != null
-                && WeatherHelper.canSnowAt(this.level, pos))
-        {
-            // Vanilla's renderSnowAndRain method selects the actual precipitation geometry and
-            // texture from this enum.  Use the same context-aware overlay used by server weather
-            // and the optional Particle Rain compatibility hook.
-            return WeatherHelper.getPrecipitation(this.level, biome, pos);
-        }
-        return biome.getPrecipitationAt(pos);
-    }
-
     @Redirect(method = "renderSnowAndRain", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;getLightColor(Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;)I"))
     private int getAdjustedLightColorForSnow(BlockAndTintGetter level, BlockPos pos)
     {
         final int packedLight = LevelRenderer.getLightColor(level, pos);
         if (Config.INSTANCE.weatherRenderChanges.getAsBoolean()
                 && this.level != null
-                && WeatherHelper.canSnowAt(this.level, pos))
+                && WeatherHelper.isActiveWinterBiome(this.level, pos))
         {
             // Adjusts the light color via a heuristic that mojang uses to make snow appear more white
             // This keeps the snow path bright after the precipitation enum is redirected.
@@ -87,24 +66,13 @@ public abstract class LevelRendererMixin
         return packedLight;
     }
 
-    @Inject(method = "renderSnowAndRain", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/BufferBuilder;begin(Lcom/mojang/blaze3d/vertex/VertexFormat$Mode;Lcom/mojang/blaze3d/vertex/VertexFormat;)V"))
-    private void overrideWithSnowTextures(LightTexture lightTexture, float partialTick, double x, double y, double z, CallbackInfo ci)
-    {
-        if (Config.INSTANCE.weatherRenderChanges.getAsBoolean()
-                && level != null
-                && WeatherHelper.canSnowAt(level, minecraft.gameRenderer.getMainCamera().getBlockPosition()))
-        {
-            RenderSystem.setShaderTexture(0, SNOW_LOCATION);
-        }
-    }
-
     @ModifyConstant(method = "renderSnowAndRain", constant = {@Constant(intValue = 5), @Constant(intValue = 10)})
     private int modifySnowAmount(int constant)
     {
         // This constant is used to control how much snow is rendered - 5 with default, 10 with fancy graphics. By default, we bump this all the way to 15.
         return Config.INSTANCE.weatherRenderChanges.getAsBoolean()
                 && level != null
-                && WeatherHelper.canSnowAt(level, minecraft.gameRenderer.getMainCamera().getBlockPosition())
+                && WeatherHelper.isActiveWinterBiome(level, minecraft.gameRenderer.getMainCamera().getBlockPosition())
                 ? Config.INSTANCE.snowDensity.getAsInt()
                 : constant;
     }

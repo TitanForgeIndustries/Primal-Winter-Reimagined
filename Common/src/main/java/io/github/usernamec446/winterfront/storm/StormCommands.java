@@ -12,6 +12,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 
 import io.github.usernamec446.winterfront.WinterFront;
+import io.github.usernamec446.winterfront.climate.ClimateConfig;
+import io.github.usernamec446.winterfront.compat.SeasonCompat;
 
 public final class StormCommands
 {
@@ -60,7 +62,8 @@ public final class StormCommands
             case CLEAR -> "clear, next storm in " + remaining(level, state);
             case STORM -> "storm '" + state.stormId + "', ends " + (state.endTick == Long.MAX_VALUE ? "never" : "in " + remaining(level, state));
         };
-        context.getSource().sendSuccess(() -> Component.literal(level.dimension().location() + ": " + phase), false);
+        final String season = ClimateConfig.get().followsSeasons() ? " [season: " + SeasonCompat.currentSeason(level) + "]" : "";
+        context.getSource().sendSuccess(() -> Component.literal(level.dimension().location() + ": " + phase + season), false);
         return Command.SINGLE_SUCCESS;
     }
 

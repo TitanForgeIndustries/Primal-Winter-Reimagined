@@ -145,7 +145,11 @@ public final class StormProfiles
               "mobs": [
                 { "entity": "minecraft:polar_bear", "category": "creature", "weight": 60, "group": [1, 3], "duringStormOnly": false },
                 { "entity": "minecraft:stray", "category": "monster", "weight": 60, "group": [1, 3], "duringStormOnly": false }
-              ]
+              ],
+              "seasons": {
+                "stormChance": { "spring": 0.3, "summer": 0.0, "autumn": 0.5, "winter": 1.0 },
+                "winterSeasons": ["winter"]
+              }
             }
             """, StandardCharsets.UTF_8);
     }

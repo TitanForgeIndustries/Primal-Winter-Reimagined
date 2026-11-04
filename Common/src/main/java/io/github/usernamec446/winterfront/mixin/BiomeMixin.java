@@ -12,9 +12,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import io.github.usernamec446.winterfront.util.WeatherHelper;
 
 /**
- * Applies the seasonal cold overlay to vanilla's context-bearing biome climate checks.  This
- * leaves Biome#getBaseTemperature and registry data unchanged, so pre-winter worlds and excluded
- * dimensions/biomes continue to use their normal definitions.
+ * Biomes are cold on their own, so vanilla places the snow and ice. This only applies the
+ * config's limits, and otherwise leaves the result to vanilla or a seasons mod.
  */
 @Mixin(Biome.class)
 public abstract class BiomeMixin
@@ -27,10 +26,6 @@ public abstract class BiomeMixin
         {
             cir.setReturnValue(false);
         }
-        else if (level != null && WeatherHelper.isActiveWinterBiome(level, pos))
-        {
-            cir.setReturnValue(WeatherHelper.canFreeze(reader, pos, true));
-        }
     }
 
     @Inject(method = "shouldFreeze(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;Z)Z", at = @At("HEAD"), cancellable = true)
@@ -41,27 +36,16 @@ public abstract class BiomeMixin
         {
             cir.setReturnValue(false);
         }
-        else if (level != null && WeatherHelper.isActiveWinterBiome(level, pos))
-        {
-            cir.setReturnValue(WeatherHelper.canFreeze(reader, pos, requireNeighbours));
-        }
     }
 
     @Inject(method = "shouldSnow(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z", at = @At("HEAD"), cancellable = true)
     private void winterfront$shouldSnow(LevelReader reader, BlockPos pos, CallbackInfoReturnable<Boolean> cir)
     {
         final Level level = WeatherHelper.seasonalLevel(reader);
-        if (level != null && WeatherHelper.holdsBackColdEffects(reader, level, pos))
+        if (level != null && (WeatherHelper.holdsBackColdEffects(reader, level, pos)
+                || (reader instanceof Level && !WeatherHelper.allowsSnowSettling(level, pos))))
         {
             cir.setReturnValue(false);
-        }
-        else if (level != null && reader instanceof Level && !WeatherHelper.allowsSnowSettling(level, pos))
-        {
-            cir.setReturnValue(false);
-        }
-        else if (level != null && WeatherHelper.isActiveWinterBiome(level, pos))
-        {
-            cir.setReturnValue(WeatherHelper.canPlaceSnow(reader, pos));
         }
     }
 }

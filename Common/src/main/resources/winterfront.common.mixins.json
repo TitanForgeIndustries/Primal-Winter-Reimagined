@@ -6,7 +6,6 @@
   "mixins": [
     "BiomeAccessor",
     "BiomeMixin",
-    "LevelMixin",
     "ServerLevelMixin"
   ],
   "client": [
