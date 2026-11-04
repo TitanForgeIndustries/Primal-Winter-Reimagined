@@ -26,7 +26,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = "PrimalWinter-1.20.1"
+rootProject.name = "WinterFront-1.20.1"
 // This distribution targets Forge.  The shared sources are added to the Forge
 // source set directly so Gradle does not try to run the obsolete vanilla
 // compiler pipeline from the archived Common project.

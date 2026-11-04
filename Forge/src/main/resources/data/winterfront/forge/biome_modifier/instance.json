@@ -1,0 +1,13 @@
+{
+  "__comment__": "This file was automatically created by mcresources",
+  "type": "winterfront:instance",
+  "surface_structures": [
+    "winterfront:ice_spikes",
+    "winterfront:ice_patch",
+    "winterfront:snow_patch",
+    "winterfront:powder_snow_patch"
+  ],
+  "top_layer_modification": [
+    "winterfront:freeze_top_layer"
+  ]
+}

@@ -37,7 +37,7 @@ jobs:
           VERSION: ${{ steps.get_version.outputs.result }}
         run: |
           gh release create "v${VERSION}" \
-            "./Forge/build/libs/primalwinter-forge-1.20.1-${VERSION}.jar" \
+            "./Forge/build/libs/winterfront-forge-1.20.1-${VERSION}.jar" \
             --draft \
-            --title "Primal Winter 1.20.1-${VERSION}" \
+            --title "Winter Front 1.20.1-${VERSION}" \
             --notes "This was an automatic Forge build."

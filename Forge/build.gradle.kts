@@ -72,7 +72,6 @@ tasks.withType<JavaExec>().configureEach {
 mixin {
     add(sourceSets.main.get(), "${modId}.refmap.json")
 
-    config("${modId}.mixins.json")
     config("${modId}.common.mixins.json")
     config("${modId}.particlerain.mixins.json")
 }

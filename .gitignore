@@ -10,7 +10,6 @@
 
 !/**/build.gradle.kts
 !/**/src/**/*.*
-!/Data/main.py
 
 !/img/**/*.png
 

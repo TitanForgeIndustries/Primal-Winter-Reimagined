@@ -12,6 +12,8 @@ issueTrackerURL = "${modIssueUrl}"
     logoFile = "logo.png"
     authors = "${modAuthor}"
     description = "${modDescription}"
+    # Clients without the mod can join, and clients with it can join servers without it.
+    displayTest = "IGNORE_ALL_VERSION"
 
 [[dependencies.${modId}]]
     modId = "forge"

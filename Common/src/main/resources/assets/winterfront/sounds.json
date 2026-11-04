@@ -1,0 +1,9 @@
+{
+  "wind": {
+    "category": "weather",
+    "subtitle": "winterfront.subtitle.wind",
+    "sounds": [
+      "winterfront:wind"
+    ]
+  }
+}
