@@ -1,6 +1,5 @@
 package io.github.usernamec446.winterfront.util;
 
-import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSourceStack;
@@ -8,8 +7,6 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -19,10 +16,14 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import org.slf4j.Logger;
 
+import io.github.usernamec446.winterfront.storm.StormCommands;
+import io.github.usernamec446.winterfront.storm.StormManager;
+
 
 public final class EventHandler
 {
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static final float BASE_ACCUMULATION_CHANCE = 1f / 16f;
 
     public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher)
     {
@@ -38,10 +39,7 @@ public final class EventHandler
             }));
         }
 
-        dispatcher.register(Commands.literal("winterfrontReloadConfig").requires(c -> c.hasPermission(2)).executes(source -> {
-            Config.INSTANCE.load();
-            return Command.SINGLE_SUCCESS;
-        }));
+        StormCommands.register(dispatcher);
     }
 
     /**
@@ -54,16 +52,12 @@ public final class EventHandler
             return;
         }
 
-        if (WeatherHelper.canControlWeather(level))
-        {
-            applyWeatherState(level);
-        }
         if (!WeatherHelper.isWinterActive(level))
         {
             return;
         }
 
-        if (Config.INSTANCE.enableSnowAccumulationDuringWeather.getAsBoolean() && level.random.nextInt(16) == 0)
+        if (Config.INSTANCE.enableSnowAccumulationDuringWeather.getAsBoolean() && level.random.nextFloat() < BASE_ACCUMULATION_CHANCE * StormManager.accumulationMultiplier(level))
         {
             final int blockX = chunk.getPos().getMinBlockX();
             final int blockZ = chunk.getPos().getMinBlockZ();
@@ -85,60 +79,4 @@ public final class EventHandler
         }
     }
 
-    public static void setLevelToThunder(LevelAccessor maybeLevel)
-    {
-        if (maybeLevel instanceof ServerLevel level && WeatherHelper.canControlWeather(level))
-        {
-            // Apply on every level load so a reconnect/restart cannot briefly retain a stale
-            // storm before the first chunk tick.  The shared seasonal predicate still keeps
-            // pre-start worlds clear and post-start worlds permanently thundering.
-            LOGGER.info("Applying Winter Front weather state for world {}", level.dimension().location());
-            applyWeatherState(level);
-        }
-    }
-
-    /**
-     * Keeps the server-authoritative weather state synchronized with the exact winter start day.
-     * This is deliberately level-tick driven rather than chunk-tick driven: a dedicated server
-     * can have loaded/force-loaded chunks without any player-ticking chunks, and the seasonal
-     * transition must still happen at the configured day boundary in that case.
-     */
-    public static void tickWeatherState(ServerLevel level)
-    {
-        if (WeatherHelper.canControlWeather(level))
-        {
-            applyWeatherState(level);
-        }
-    }
-
-    /** Applies the configured grace period or permanent storm without fighting the game rule. */
-    private static void applyWeatherState(ServerLevel level)
-    {
-        final boolean started = WeatherHelper.isWinterActive(level);
-        final GameRules.BooleanValue weatherCycle = level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE);
-        if (started)
-        {
-            // Eternal storm: lock the world into permanent thundering snow.
-            if (!level.isThundering() || weatherCycle.get())
-            {
-                level.setWeatherParameters(0, Integer.MAX_VALUE, true, true);
-            }
-            if (weatherCycle.get())
-            {
-                weatherCycle.set(false, level.getServer());
-            }
-        }
-        else
-        {
-            // Grace period: clear weather and leave the normal weather cycle available.
-            if (level.isRaining() || level.isThundering())
-            {
-                level.setWeatherParameters(Integer.MAX_VALUE, 0, false, false);
-            }
-            if (!weatherCycle.get())
-            {
-                weatherCycle.set(true, level.getServer());
-            }
-        }
-    }
 }

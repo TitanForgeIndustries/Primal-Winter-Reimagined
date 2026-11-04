@@ -18,7 +18,7 @@ import net.minecraftforge.common.world.ModifiableBiomeInfo;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.MobSpawnEvent;
-import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.event.level.SleepFinishedTimeEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.fml.ModList;
@@ -30,10 +30,12 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.event.server.ServerAboutToStartEvent;
 
 import io.github.usernamec446.winterfront.mixin.BiomeAccessor;
 import io.github.usernamec446.winterfront.platform.XPlatform;
+import io.github.usernamec446.winterfront.storm.StormManager;
 import io.github.usernamec446.winterfront.util.Config;
 import io.github.usernamec446.winterfront.util.EventHandler;
 import io.github.usernamec446.winterfront.util.WeatherHelper;
@@ -73,11 +75,16 @@ public final class ForgeWinterFront
         forgeBus.addListener(LegacyPrimalWinterMappings::remapMissing);
         forgeBus.addListener((ServerAboutToStartEvent event) -> syncClimateToNetworkField(event.getServer()));
         forgeBus.addListener((RegisterCommandsEvent event) -> EventHandler.registerCommands(event.getDispatcher()));
-        forgeBus.addListener((LevelEvent.Load event) -> EventHandler.setLevelToThunder(event.getLevel()));
         forgeBus.addListener((TickEvent.LevelTickEvent event) -> {
-            if (event.phase == TickEvent.Phase.END && event.level instanceof net.minecraft.server.level.ServerLevel level)
+            if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level)
             {
-                EventHandler.tickWeatherState(level);
+                StormManager.tick(level);
+            }
+        });
+        forgeBus.addListener((SleepFinishedTimeEvent event) -> {
+            if (event.getLevel() instanceof ServerLevel level)
+            {
+                StormManager.onSleepFinished(level);
             }
         });
         forgeBus.addListener((MobSpawnEvent.PositionCheck event) -> {

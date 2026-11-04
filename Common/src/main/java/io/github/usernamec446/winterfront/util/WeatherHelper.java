@@ -13,6 +13,9 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.DerivedLevelData;
 
+import io.github.usernamec446.winterfront.storm.StormProfile;
+import io.github.usernamec446.winterfront.storm.StormProfiles;
+
 /**
  * Shared, side-safe rules for deciding whether a location participates in Winter Front weather.
  *
@@ -62,8 +65,13 @@ public final class WeatherHelper
      */
     public static boolean isWinterActive(Level level)
     {
-        return supportsWinterWeather(level)
-                && level.getDayTime() / 24000L >= Config.INSTANCE.snowStartDay.getAsInt();
+        if (!supportsWinterWeather(level))
+        {
+            return false;
+        }
+        // Called from worldgen threads too, so this reads the immutable profile and not saved data.
+        final StormProfile profile = level.isClientSide ? null : StormProfiles.forDimension(level.dimension());
+        return level.getDayTime() / 24000L >= (profile != null ? profile.firstStormDay() : Config.INSTANCE.snowStartDay.getAsInt());
     }
 
     /** Returns whether the biome at the position is enabled by the configured biome rules. */
