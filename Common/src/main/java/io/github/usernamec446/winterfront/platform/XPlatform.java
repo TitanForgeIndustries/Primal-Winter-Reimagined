@@ -3,6 +3,7 @@ package io.github.usernamec446.winterfront.platform;
 import java.nio.file.Path;
 import java.util.ServiceLoader;
 import net.minecraft.core.Registry;
+import net.minecraft.server.level.ServerPlayer;
 
 
 public interface XPlatform
@@ -26,4 +27,6 @@ public interface XPlatform
     Path configDir();
 
     boolean isModLoaded(String modId);
+
+    boolean isFrostCancelled(ServerPlayer player);
 }

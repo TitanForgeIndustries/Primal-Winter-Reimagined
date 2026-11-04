@@ -65,9 +65,9 @@ public record StormProfile(List<ResourceLocation> dimensions, Mode mode, int fir
         new DayRange(2, 6),
         true,
         List.of(
-            new StormType("light_snow", 60, new DayRange(0.5, 1), false, 0.4f, 0.5f),
-            new StormType("snowfall", 30, new DayRange(0.5, 1.5), false, 1f, 1f),
-            new StormType("blizzard", 10, new DayRange(0.5, 1), true, 1f, 2f)
+            new StormType("light_snow", 60, new DayRange(0.5, 1), false, 0.4f, 0.5f, false),
+            new StormType("snowfall", 30, new DayRange(0.5, 1.5), false, 1f, 1f, false),
+            new StormType("blizzard", 10, new DayRange(0.5, 1), true, 1f, 2f, true)
         ),
         SnowSettings.DEFAULT,
         List.of(),

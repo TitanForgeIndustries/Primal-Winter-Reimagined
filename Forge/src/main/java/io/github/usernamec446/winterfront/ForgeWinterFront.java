@@ -34,11 +34,13 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.server.ServerAboutToStartEvent;
 
 import io.github.usernamec446.winterfront.mixin.BiomeAccessor;
 import io.github.usernamec446.winterfront.platform.XPlatform;
 import io.github.usernamec446.winterfront.climate.ClimateConfig;
+import io.github.usernamec446.winterfront.frost.FrostManager;
 import io.github.usernamec446.winterfront.storm.StormManager;
 import io.github.usernamec446.winterfront.storm.StormProfile;
 import io.github.usernamec446.winterfront.storm.StormProfiles;
@@ -86,6 +88,12 @@ public final class ForgeWinterFront
             if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level)
             {
                 StormManager.tick(level);
+            }
+        });
+        forgeBus.addListener((TickEvent.PlayerTickEvent event) -> {
+            if (event.phase == TickEvent.Phase.END && event.player instanceof ServerPlayer player)
+            {
+                FrostManager.tick(player);
             }
         });
         forgeBus.addListener((SleepFinishedTimeEvent event) -> {

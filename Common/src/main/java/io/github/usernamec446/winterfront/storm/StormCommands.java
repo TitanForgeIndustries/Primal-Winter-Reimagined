@@ -8,12 +8,16 @@ import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 
 import io.github.usernamec446.winterfront.WinterFront;
 import io.github.usernamec446.winterfront.climate.ClimateConfig;
 import io.github.usernamec446.winterfront.compat.SeasonCompat;
+import io.github.usernamec446.winterfront.frost.FrostConfig;
+import io.github.usernamec446.winterfront.frost.FrostManager;
 
 public final class StormCommands
 {
@@ -22,6 +26,10 @@ public final class StormCommands
         dispatcher.register(Commands.literal(WinterFront.MOD_ID)
             .requires(source -> source.hasPermission(2))
             .then(Commands.literal("reload").executes(StormCommands::reload))
+            .then(Commands.literal("frost").then(Commands.literal("status")
+                .executes(context -> frostStatus(context, context.getSource().getPlayerOrException()))
+                .then(Commands.argument("player", EntityArgument.player())
+                    .executes(context -> frostStatus(context, EntityArgument.getPlayer(context, "player"))))))
             .then(Commands.literal("storm")
                 .then(Commands.literal("status").executes(StormCommands::status))
                 .then(Commands.literal("stop").executes(StormCommands::stop))
@@ -37,13 +45,20 @@ public final class StormCommands
 
     private static int reload(CommandContext<CommandSourceStack> context)
     {
-        if (StormProfiles.load())
+        if (StormProfiles.load() & FrostConfig.load())
         {
-            context.getSource().sendSuccess(() -> Component.literal("Weather profiles reloaded. Changes to climate.json, world generation and the spawn list of mobs need a restart."), true);
+            context.getSource().sendSuccess(() -> Component.literal("Weather profiles and frost settings reloaded. Changes to climate.json, world generation and the spawn list of mobs need a restart."), true);
             return Command.SINGLE_SUCCESS;
         }
-        context.getSource().sendFailure(Component.literal("Weather profiles have errors and were not changed; see the server log"));
+        context.getSource().sendFailure(Component.literal("Config has errors, and the broken files were not applied; see the server log"));
         return 0;
+    }
+
+    private static int frostStatus(CommandContext<CommandSourceStack> context, ServerPlayer player)
+    {
+        final FrostManager.Status status = FrostManager.status(player);
+        context.getSource().sendSuccess(() -> Component.literal(player.getScoreboardName() + ": " + status + ", frozen ticks " + player.getTicksFrozen() + "/" + player.getTicksRequiredToFreeze()), false);
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int status(CommandContext<CommandSourceStack> context)

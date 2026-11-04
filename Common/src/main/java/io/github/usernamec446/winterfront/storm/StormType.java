@@ -12,7 +12,7 @@ import io.github.usernamec446.winterfront.util.StrictCodecs;
  * @param intensity Maximum rain level sent to clients. Vanilla stops treating the level as raining
  *                  at 0.2, and stops treating it as thundering below 0.9.
  */
-public record StormType(String id, int weight, DayRange days, boolean thunder, float intensity, float accumulationMultiplier)
+public record StormType(String id, int weight, DayRange days, boolean thunder, float intensity, float accumulationMultiplier, boolean frost)
 {
     public static final float MIN_INTENSITY = 0.25f;
 
@@ -22,7 +22,8 @@ public record StormType(String id, int weight, DayRange days, boolean thunder, f
         DayRange.CODEC.fieldOf("days").forGetter(StormType::days),
         StrictCodecs.optional(Codec.BOOL, "thunder", false).forGetter(StormType::thunder),
         StrictCodecs.optional(Codec.FLOAT, "intensity", 1f).forGetter(StormType::intensity),
-        StrictCodecs.optional(Codec.FLOAT, "accumulationMultiplier", 1f).forGetter(StormType::accumulationMultiplier)
+        StrictCodecs.optional(Codec.FLOAT, "accumulationMultiplier", 1f).forGetter(StormType::accumulationMultiplier),
+        StrictCodecs.optional(Codec.BOOL, "frost", false).forGetter(StormType::frost)
     ).apply(instance, StormType::new));
 
     public static final Codec<StormType> CODEC = BASE_CODEC.flatXmap(StormType::validate, DataResult::success);

@@ -132,7 +132,7 @@ public final class StormProfiles
               "stormTypes": [
                 { "id": "light_snow", "weight": 60, "days": [0.5, 1.0], "thunder": false, "intensity": 0.4, "accumulationMultiplier": 0.5 },
                 { "id": "snowfall", "weight": 30, "days": [0.5, 1.5], "thunder": false, "intensity": 1.0, "accumulationMultiplier": 1.0 },
-                { "id": "blizzard", "weight": 10, "days": [0.5, 1.0], "thunder": true, "intensity": 1.0, "accumulationMultiplier": 2.0 }
+                { "id": "blizzard", "weight": 10, "days": [0.5, 1.0], "thunder": true, "intensity": 1.0, "accumulationMultiplier": 2.0, "frost": true }
               ],
               "snow": {
                 "accumulation": true,

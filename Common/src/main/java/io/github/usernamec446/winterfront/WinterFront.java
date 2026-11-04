@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
 
 import io.github.usernamec446.winterfront.climate.ClimateConfig;
+import io.github.usernamec446.winterfront.frost.FrostConfig;
 import io.github.usernamec446.winterfront.storm.StormProfiles;
 import io.github.usernamec446.winterfront.world.WinterFrontFeatures;
 
@@ -27,5 +28,6 @@ public final class WinterFront
 
         ClimateConfig.load();
         StormProfiles.load();
+        FrostConfig.load();
     }
 }
