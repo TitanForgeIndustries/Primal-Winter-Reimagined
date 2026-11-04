@@ -1,35 +1,28 @@
 package io.github.usernamec446.winterfront;
 
-import java.util.List;
-
 import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 
 import io.github.usernamec446.winterfront.util.Config;
 
-/**
- * Forge-side config definition for Winter Front.
- *
- * <p>This builds the {@link ForgeConfigSpec} that Forge serialises to
- * {@code config/winterfront-common.toml}, and {@link #bake()} copies the parsed values into the
- * loader-agnostic {@link Config} holders. {@code bake} is wired into {@link Config#onLoad} during
- * mod construction, and runs both on initial load and whenever {@code /winterfrontReloadConfig}
- * calls {@link Config#load()}.</p>
- */
+/** Owns config/winterfront/server.toml and client.toml and copies their values into {@link Config}. */
 public final class ForgeConfig
 {
-    public static final ForgeConfigSpec SPEC;
+    public static final String SERVER_FILE = WinterFront.MOD_ID + "/server.toml";
+    public static final String CLIENT_FILE = WinterFront.MOD_ID + "/client.toml";
 
-    // General
+    public static final ForgeConfigSpec SERVER_SPEC;
+    public static final ForgeConfigSpec CLIENT_SPEC;
+
     private static final ForgeConfigSpec.BooleanValue ENABLE_WEATHER_COMMAND;
-    private static final ForgeConfigSpec.BooleanValue ENABLE_SNOW_ACCUMULATION_WORLDGEN;
-    private static final ForgeConfigSpec.BooleanValue ENABLE_SNOW_ACCUMULATION_WEATHER;
-    private static final ForgeConfigSpec.BooleanValue INVERT_NON_WINTER_BIOMES;
-    private static final ForgeConfigSpec.BooleanValue INVERT_NON_WINTER_DIMENSIONS;
-    private static final ForgeConfigSpec.IntValue SNOW_START_DAY;
-    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> NON_WINTER_DIMENSIONS;
-    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> NON_WINTER_BIOMES;
+    private static final ForgeConfigSpec.BooleanValue FREEZE_TOP_LAYER;
+    private static final ForgeConfigSpec.BooleanValue DEEP_SNOW;
+    private static final ForgeConfigSpec.BooleanValue ICE_SPIKES;
+    private static final ForgeConfigSpec.BooleanValue ICE_PATCHES;
+    private static final ForgeConfigSpec.BooleanValue SNOW_PATCHES;
+    private static final ForgeConfigSpec.BooleanValue POWDER_SNOW_PATCHES;
 
-    // Client
     private static final ForgeConfigSpec.DoubleValue FOG_DENSITY;
     private static final ForgeConfigSpec.IntValue SNOW_DENSITY;
     private static final ForgeConfigSpec.BooleanValue WIND_SOUNDS;
@@ -41,117 +34,80 @@ public final class ForgeConfig
 
     static
     {
-        final ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        final ForgeConfigSpec.Builder server = new ForgeConfigSpec.Builder();
+        ENABLE_WEATHER_COMMAND = server
+            .comment("If false, disables the vanilla /weather command.")
+            .define("enableWeatherCommand", true);
+        server.comment("World generation. These only affect newly generated chunks and need a server restart.").push("worldgen");
+        FREEZE_TOP_LAYER = server
+            .comment("Cover new chunks in snow and freeze their water once winter has started.")
+            .define("freezeTopLayer", true);
+        DEEP_SNOW = server
+            .comment("Generate snow more than one layer deep. Deep snow prevents most surface mob spawning.")
+            .define("deepSnow", false);
+        ICE_SPIKES = server.define("iceSpikes", true);
+        ICE_PATCHES = server.define("icePatches", true);
+        SNOW_PATCHES = server.define("snowPatches", true);
+        POWDER_SNOW_PATCHES = server.define("powderSnowPatches", true);
+        server.pop();
+        SERVER_SPEC = server.build();
 
-        builder.comment("General settings for Winter Front").push("general");
-
-        ENABLE_WEATHER_COMMAND = builder
-                .comment("If false, disables the vanilla /weather command.")
-                .define("enableWeatherCommand", true);
-
-        ENABLE_SNOW_ACCUMULATION_WORLDGEN = builder
-                .comment(
-                        "If true, snow will be layered higher than one layer during world generation.",
-                        "Note: snow layers > 1 block tall tend to prevent most surface mob spawning, since there are no flat places to spawn."
-                )
-                .define("enableSnowAccumulationDuringWorldgen", false);
-
-        ENABLE_SNOW_ACCUMULATION_WEATHER = builder
-                .comment("If true, snow will gradually stack higher than one layer during active weather, once the storm has begun.")
-                .define("enableSnowAccumulationDuringWeather", true);
-
-        INVERT_NON_WINTER_BIOMES = builder
-                .comment("If true, the built-in non-winter biome list is treated as the ONLY winter biomes, and all others are left alone.")
-                .define("invertNonWinterBiomes", false);
-
-        INVERT_NON_WINTER_DIMENSIONS = builder
-                .comment("If true, the built-in non-winter dimension list is treated as the ONLY winter dimensions, and all others are left alone.")
-                .define("invertNonWinterDimensions", false);
-
-        SNOW_START_DAY = builder
-                .comment("The in-game day on which the permanent snowstorm begins. Before this day, the skies are kept clear so you can gear up.")
-                .defineInRange("snowStartDay", 5, 0, Integer.MAX_VALUE);
-
-        NON_WINTER_DIMENSIONS = builder
-                .comment(
-                        "Dimensions that should NOT be frozen by Winter Front.",
-                        "Add modded dimension IDs here to leave them alone, e.g. \"aether:the_aether\", \"twilightforest:twilight_forest\".",
-                        "If invertNonWinterDimensions is true, this instead becomes the ONLY list of dimensions that ARE frozen."
-                )
-                .defineList("nonWinterDimensions",
-                        List.of("minecraft:the_nether", "minecraft:the_end"),
-                        o -> o instanceof String);
-
-        NON_WINTER_BIOMES = builder
-                .comment(
-                        "Biomes that should NOT be frozen by Winter Front.",
-                        "Add modded biome IDs here to leave them alone.",
-                        "If invertNonWinterBiomes is true, this instead becomes the ONLY list of biomes that ARE frozen.",
-                        "NOTE: changes to this list only apply on world (re)load, not via a live /reload."
-                )
-                .defineList("nonWinterBiomes",
-                        List.of(
-                                "minecraft:nether_wastes", "minecraft:crimson_forest", "minecraft:warped_forest",
-                                "minecraft:basalt_deltas", "minecraft:soul_sand_valley", "minecraft:end_barrens",
-                                "minecraft:end_highlands", "minecraft:end_midlands", "minecraft:the_end", "minecraft:the_void"
-                        ),
-                        o -> o instanceof String);
-
-        builder.pop();
-
-        builder.comment("Client-side visual and sound settings").push("client");
-
-        FOG_DENSITY = builder
-                .comment("How dense the fog effect during a snowstorm is.")
-                .defineInRange("fogDensity", 0.5D, 0.0D, 5.0D);
-
-        SNOW_DENSITY = builder
-                .comment("How visually dense the snow weather effect is. Vanilla uses 5 (fast) or 10 (fancy); higher fills the sky but costs performance.")
-                .defineInRange("snowDensity", 15, 1, 15);
-
-        WIND_SOUNDS = builder
-                .comment("Enable additional wind / snowstorm ambience.")
-                .define("windSounds", true);
-
-        SNOW_SOUNDS = builder
-                .comment("Enable additional snow (rain) weather sounds.")
-                .define("snowSounds", true);
-
-        FOG_COLOR_DAY = builder
-                .comment("Fog color during the day, as a decimal 0xRRGGBB value. Default is 0xBFBFD8 (12566488).")
-                .defineInRange("fogColorDay", 0xBFBFD8, 0, 0xFFFFFF);
-
-        FOG_COLOR_NIGHT = builder
-                .comment("Fog color during the night, as a decimal 0xRRGGBB value. Default is 0x0C0C19 (789529).")
-                .defineInRange("fogColorNight", 0x0C0C19, 0, 0xFFFFFF);
-
-        WEATHER_RENDER_CHANGES = builder
-                .comment("Replace the vanilla rain renderer with one that renders faster, denser snow.")
-                .define("weatherRenderChanges", true);
-
-        SKY_RENDER_CHANGES = builder
-                .comment("Disable sunrise / sunset sky effects during a snowstorm for a bleak, overcast look.")
-                .define("skyRenderChanges", true);
-
-        builder.pop();
-
-        SPEC = builder.build();
+        final ForgeConfigSpec.Builder client = new ForgeConfigSpec.Builder();
+        FOG_DENSITY = client
+            .comment("How dense the fog effect during a snowstorm is.")
+            .defineInRange("fogDensity", 0.5D, 0.0D, 5.0D);
+        SNOW_DENSITY = client
+            .comment("How visually dense the snow weather effect is. Vanilla uses 5 (fast) or 10 (fancy); 15 is the maximum.")
+            .defineInRange("snowDensity", 15, 1, 15);
+        WIND_SOUNDS = client
+            .comment("Enable additional wind / snowstorm ambience.")
+            .define("windSounds", true);
+        SNOW_SOUNDS = client
+            .comment("Enable additional snow (rain) weather sounds.")
+            .define("snowSounds", true);
+        FOG_COLOR_DAY = client
+            .comment("Fog color during the day, as a decimal 0xRRGGBB value. Default is 0xBFBFD8 (12566488).")
+            .defineInRange("fogColorDay", 0xBFBFD8, 0, 0xFFFFFF);
+        FOG_COLOR_NIGHT = client
+            .comment("Fog color during the night, as a decimal 0xRRGGBB value. Default is 0x0C0C19 (789529).")
+            .defineInRange("fogColorNight", 0x0C0C19, 0, 0xFFFFFF);
+        WEATHER_RENDER_CHANGES = client
+            .comment("Replace the vanilla rain renderer with one that renders faster, denser snow.")
+            .define("weatherRenderChanges", true);
+        SKY_RENDER_CHANGES = client
+            .comment("Disable sunrise / sunset sky effects during a snowstorm for a bleak, overcast look.")
+            .define("skyRenderChanges", true);
+        CLIENT_SPEC = client.build();
     }
 
-    /** Copies parsed config values into the loader-agnostic {@link Config} holders. */
-    public static void bake()
+    public static void onConfigEvent(ModConfigEvent event)
+    {
+        final ModConfig config = event.getConfig();
+        if (config.getSpec() == SERVER_SPEC)
+        {
+            bakeServer();
+        }
+        else if (config.getSpec() == CLIENT_SPEC)
+        {
+            bakeClient();
+        }
+    }
+
+    private static void bakeServer()
     {
         final Config config = Config.INSTANCE;
-
         config.enableWeatherCommand.set(ENABLE_WEATHER_COMMAND.get());
-        config.enableSnowAccumulationDuringWorldgen.set(ENABLE_SNOW_ACCUMULATION_WORLDGEN.get());
-        config.enableSnowAccumulationDuringWeather.set(ENABLE_SNOW_ACCUMULATION_WEATHER.get());
-        config.invertNonWinterBiomes.set(INVERT_NON_WINTER_BIOMES.get());
-        config.invertNonWinterDimensions.set(INVERT_NON_WINTER_DIMENSIONS.get());
-        config.snowStartDay.set(SNOW_START_DAY.get());
-        config.setNonWinterDimensions(NON_WINTER_DIMENSIONS.get());
-        config.setNonWinterBiomes(NON_WINTER_BIOMES.get());
+        config.worldgenFreezeTopLayer.set(FREEZE_TOP_LAYER.get());
+        config.worldgenDeepSnow.set(DEEP_SNOW.get());
+        config.worldgenIceSpikes.set(ICE_SPIKES.get());
+        config.worldgenIcePatches.set(ICE_PATCHES.get());
+        config.worldgenSnowPatches.set(SNOW_PATCHES.get());
+        config.worldgenPowderSnowPatches.set(POWDER_SNOW_PATCHES.get());
+    }
 
+    private static void bakeClient()
+    {
+        final Config config = Config.INSTANCE;
         config.fogDensity.set(FOG_DENSITY.get().floatValue());
         config.snowDensity.set(SNOW_DENSITY.get());
         config.windSounds.set(WIND_SOUNDS.get());

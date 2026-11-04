@@ -7,11 +7,17 @@ import java.util.Optional;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.util.RandomSource;
 
+import io.github.usernamec446.winterfront.util.StrictCodecs;
+
 /** Weather schedule for one or more dimensions, loaded from config/winterfront/profiles/*.json. */
-public record StormProfile(List<ResourceLocation> dimensions, Mode mode, int firstStormDay, DayRange clearDays, boolean sleepSkipsStorm, List<StormType> stormTypes)
+public record StormProfile(List<ResourceLocation> dimensions, Mode mode, int firstStormDay, DayRange clearDays, boolean sleepSkipsStorm, List<StormType> stormTypes, SnowSettings snow, List<SnowSettings.BiomeRule> biomeRules, List<WinterMob> mobs)
 {
     public enum Mode
     {
@@ -39,11 +45,14 @@ public record StormProfile(List<ResourceLocation> dimensions, Mode mode, int fir
 
     private static final Codec<StormProfile> BASE_CODEC = RecordCodecBuilder.create(instance -> instance.group(
         ResourceLocation.CODEC.listOf().fieldOf("dimensions").forGetter(StormProfile::dimensions),
-        Mode.CODEC.optionalFieldOf("mode", Mode.CYCLE).forGetter(StormProfile::mode),
-        Codec.INT.optionalFieldOf("firstStormDay", 5).forGetter(StormProfile::firstStormDay),
-        DayRange.CODEC.optionalFieldOf("clearDays", new DayRange(2, 6)).forGetter(StormProfile::clearDays),
-        Codec.BOOL.optionalFieldOf("sleepSkipsStorm", true).forGetter(StormProfile::sleepSkipsStorm),
-        StormType.CODEC.listOf().optionalFieldOf("stormTypes", List.of()).forGetter(StormProfile::stormTypes)
+        StrictCodecs.optional(Mode.CODEC, "mode", Mode.CYCLE).forGetter(StormProfile::mode),
+        StrictCodecs.optional(Codec.INT, "firstStormDay", 5).forGetter(StormProfile::firstStormDay),
+        StrictCodecs.optional(DayRange.CODEC, "clearDays", new DayRange(2, 6)).forGetter(StormProfile::clearDays),
+        StrictCodecs.optional(Codec.BOOL, "sleepSkipsStorm", true).forGetter(StormProfile::sleepSkipsStorm),
+        StrictCodecs.optional(StormType.CODEC.listOf(), "stormTypes", List.of()).forGetter(StormProfile::stormTypes),
+        StrictCodecs.optional(SnowSettings.CODEC, "snow", SnowSettings.DEFAULT).forGetter(StormProfile::snow),
+        StrictCodecs.optional(SnowSettings.BiomeRule.LIST_CODEC, "biomeRules", List.of()).forGetter(StormProfile::biomeRules),
+        StrictCodecs.optional(WinterMob.CODEC.listOf(), "mobs", List.of()).forGetter(StormProfile::mobs)
     ).apply(instance, StormProfile::new));
 
     public static final Codec<StormProfile> CODEC = BASE_CODEC.flatXmap(StormProfile::validate, DataResult::success);
@@ -58,6 +67,12 @@ public record StormProfile(List<ResourceLocation> dimensions, Mode mode, int fir
             new StormType("light_snow", 60, new DayRange(0.5, 1), false, 0.4f, 0.5f),
             new StormType("snowfall", 30, new DayRange(0.5, 1.5), false, 1f, 1f),
             new StormType("blizzard", 10, new DayRange(0.5, 1), true, 1f, 2f)
+        ),
+        SnowSettings.DEFAULT,
+        List.of(),
+        List.of(
+            new WinterMob(EntityType.POLAR_BEAR, MobCategory.CREATURE, 60, List.of(1, 3), false),
+            new WinterMob(EntityType.STRAY, MobCategory.MONSTER, 60, List.of(1, 3), false)
         )
     );
 
@@ -89,6 +104,16 @@ public record StormProfile(List<ResourceLocation> dimensions, Mode mode, int fir
     public Optional<StormType> stormType(String id)
     {
         return stormTypes.stream().filter(type -> type.id().equals(id)).findFirst();
+    }
+
+    public Optional<SnowSettings.BiomeRule> biomeRule(Holder<Biome> biome)
+    {
+        return biomeRules.stream().filter(rule -> rule.biomes().matches(biome)).findFirst();
+    }
+
+    public Optional<WinterMob> mob(EntityType<?> type)
+    {
+        return mobs.stream().filter(mob -> mob.entity() == type).findFirst();
     }
 
     public StormType randomStormType(RandomSource random)

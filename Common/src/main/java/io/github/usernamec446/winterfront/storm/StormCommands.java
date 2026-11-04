@@ -12,7 +12,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 
 import io.github.usernamec446.winterfront.WinterFront;
-import io.github.usernamec446.winterfront.util.Config;
 
 public final class StormCommands
 {
@@ -36,10 +35,9 @@ public final class StormCommands
 
     private static int reload(CommandContext<CommandSourceStack> context)
     {
-        Config.INSTANCE.load();
         if (StormProfiles.load())
         {
-            context.getSource().sendSuccess(() -> Component.literal("Winter Front config reloaded"), true);
+            context.getSource().sendSuccess(() -> Component.literal("Weather profiles reloaded. Changes to climate.json, world generation and the spawn list of mobs need a restart."), true);
             return Command.SINGLE_SUCCESS;
         }
         context.getSource().sendFailure(Component.literal("Weather profiles have errors and were not changed; see the server log"));

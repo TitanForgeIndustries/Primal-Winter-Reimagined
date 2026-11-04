@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.mojang.logging.LogUtils;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -35,6 +36,14 @@ public final class StormProfiles
     public static StormProfile forDimension(ResourceKey<Level> dimension)
     {
         return byDimension.get(dimension.location());
+    }
+
+    /** Every mob from every profile, without repeating an entity. */
+    public static List<WinterMob> allMobs()
+    {
+        final Map<net.minecraft.world.entity.EntityType<?>, WinterMob> mobs = new java.util.LinkedHashMap<>();
+        byDimension.values().forEach(profile -> profile.mobs().forEach(mob -> mobs.putIfAbsent(mob.entity(), mob)));
+        return List.copyOf(mobs.values());
     }
 
     /** @return true if every file was valid and the new profiles are now active. */
@@ -62,9 +71,10 @@ public final class StormProfiles
             {
                 try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8))
                 {
-                    final StormProfile profile = StormProfile.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseReader(reader))
-                        .resultOrPartial(error -> LOGGER.error("Invalid weather profile {}: {}", file.getFileName(), error))
-                        .orElse(null);
+                    final DataResult<StormProfile> result = StormProfile.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseReader(reader));
+                    result.error().ifPresent(error -> LOGGER.error("Invalid weather profile {}: {}", file.getFileName(), error.message()));
+                    // Not resultOrPartial: a partial result is the file with the broken parts dropped.
+                    final StormProfile profile = result.result().orElse(null);
                     valid &= profile != null;
                     if (profile != null)
                     {
@@ -123,6 +133,18 @@ public final class StormProfiles
                 { "id": "light_snow", "weight": 60, "days": [0.5, 1.0], "thunder": false, "intensity": 0.4, "accumulationMultiplier": 0.5 },
                 { "id": "snowfall", "weight": 30, "days": [0.5, 1.5], "thunder": false, "intensity": 1.0, "accumulationMultiplier": 1.0 },
                 { "id": "blizzard", "weight": 10, "days": [0.5, 1.0], "thunder": true, "intensity": 1.0, "accumulationMultiplier": 2.0 }
+              ],
+              "snow": {
+                "accumulation": true,
+                "chancePerChunkTick": 0.0625,
+                "maxLayers": 5,
+                "maxBlockLight": 9,
+                "altitude": { "minY": -64, "bonusLayersFromY": 120, "maxBonusLayers": 0 }
+              },
+              "biomeRules": [],
+              "mobs": [
+                { "entity": "minecraft:polar_bear", "category": "creature", "weight": 60, "group": [1, 3], "duringStormOnly": false },
+                { "entity": "minecraft:stray", "category": "monster", "weight": 60, "group": [1, 3], "duringStormOnly": false }
               ]
             }
             """, StandardCharsets.UTF_8);

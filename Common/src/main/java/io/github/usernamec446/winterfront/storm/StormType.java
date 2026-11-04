@@ -4,6 +4,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
+import io.github.usernamec446.winterfront.util.StrictCodecs;
+
 /**
  * One kind of storm.
  *
@@ -18,9 +20,9 @@ public record StormType(String id, int weight, DayRange days, boolean thunder, f
         Codec.STRING.fieldOf("id").forGetter(StormType::id),
         Codec.INT.fieldOf("weight").forGetter(StormType::weight),
         DayRange.CODEC.fieldOf("days").forGetter(StormType::days),
-        Codec.BOOL.optionalFieldOf("thunder", false).forGetter(StormType::thunder),
-        Codec.FLOAT.optionalFieldOf("intensity", 1f).forGetter(StormType::intensity),
-        Codec.FLOAT.optionalFieldOf("accumulationMultiplier", 1f).forGetter(StormType::accumulationMultiplier)
+        StrictCodecs.optional(Codec.BOOL, "thunder", false).forGetter(StormType::thunder),
+        StrictCodecs.optional(Codec.FLOAT, "intensity", 1f).forGetter(StormType::intensity),
+        StrictCodecs.optional(Codec.FLOAT, "accumulationMultiplier", 1f).forGetter(StormType::accumulationMultiplier)
     ).apply(instance, StormType::new));
 
     public static final Codec<StormType> CODEC = BASE_CODEC.flatXmap(StormType::validate, DataResult::success);

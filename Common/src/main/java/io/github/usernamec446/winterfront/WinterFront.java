@@ -3,8 +3,8 @@ package io.github.usernamec446.winterfront;
 import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
 
+import io.github.usernamec446.winterfront.climate.ClimateConfig;
 import io.github.usernamec446.winterfront.storm.StormProfiles;
-import io.github.usernamec446.winterfront.util.Config;
 import io.github.usernamec446.winterfront.world.WinterFrontFeatures;
 
 public final class WinterFront
@@ -25,7 +25,7 @@ public final class WinterFront
 
         WinterFrontFeatures.FEATURES.lateSetup();
 
-        Config.INSTANCE.load();
+        ClimateConfig.load();
         StormProfiles.load();
     }
 }

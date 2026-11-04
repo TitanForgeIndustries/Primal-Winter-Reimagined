@@ -1,5 +1,6 @@
 package io.github.usernamec446.winterfront.util;
 
+import java.util.Optional;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSourceStack;
@@ -7,7 +8,6 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -17,13 +17,15 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import org.slf4j.Logger;
 
 import io.github.usernamec446.winterfront.storm.StormCommands;
+import io.github.usernamec446.winterfront.storm.SnowSettings;
 import io.github.usernamec446.winterfront.storm.StormManager;
+import io.github.usernamec446.winterfront.storm.StormProfile;
+import io.github.usernamec446.winterfront.storm.StormProfiles;
 
 
 public final class EventHandler
 {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final float BASE_ACCUMULATION_CHANCE = 1f / 16f;
 
     public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher)
     {
@@ -57,24 +59,23 @@ public final class EventHandler
             return;
         }
 
-        if (Config.INSTANCE.enableSnowAccumulationDuringWeather.getAsBoolean() && level.random.nextFloat() < BASE_ACCUMULATION_CHANCE * StormManager.accumulationMultiplier(level))
+        final StormProfile profile = StormProfiles.forDimension(level.dimension());
+        final BlockPos pos = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, level.getBlockRandomPos(chunk.getPos().getMinBlockX(), 0, chunk.getPos().getMinBlockZ(), 15));
+        final Optional<SnowSettings.BiomeRule> rule = profile.biomeRule(level.getBiome(pos));
+        final float multiplier = StormManager.accumulationMultiplier(level) * rule.map(SnowSettings.BiomeRule::accumulationMultiplier).orElse(1f);
+        if (level.random.nextFloat() >= profile.snow().chancePerChunkTick() * multiplier || !WeatherHelper.allowsSnowSettling(level, pos) || !WeatherHelper.isSnowingAt(level, pos))
         {
-            final int blockX = chunk.getPos().getMinBlockX();
-            final int blockZ = chunk.getPos().getMinBlockZ();
-            final BlockPos pos = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, level.getBlockRandomPos(blockX, 0, blockZ, 15));
-            final BlockState state = level.getBlockState(pos);
-            if (WeatherHelper.isSnowingAt(level, pos) && level.getBrightness(LightLayer.BLOCK, pos) < 10)
-            {
-                if (state.getBlock() == Blocks.SNOW)
-                {
-                    // Stack snow layers
-                    final int layers = state.getValue(BlockStateProperties.LAYERS);
-                    if (layers < 5)
-                    {
-                        level.setBlockAndUpdate(pos, state.setValue(BlockStateProperties.LAYERS, 1 + layers));
-                    }
+            return;
+        }
 
-                }
+        // Stack snow layers
+        final BlockState state = level.getBlockState(pos);
+        if (state.getBlock() == Blocks.SNOW)
+        {
+            final int layers = state.getValue(BlockStateProperties.LAYERS);
+            if (layers < profile.snow().layerLimitAt(pos.getY(), rule))
+            {
+                level.setBlockAndUpdate(pos, state.setValue(BlockStateProperties.LAYERS, 1 + layers));
             }
         }
     }

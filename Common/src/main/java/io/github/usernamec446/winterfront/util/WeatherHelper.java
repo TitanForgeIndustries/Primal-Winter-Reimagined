@@ -13,6 +13,8 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.DerivedLevelData;
 
+import io.github.usernamec446.winterfront.climate.ClimateConfig;
+import io.github.usernamec446.winterfront.storm.SnowSettings;
 import io.github.usernamec446.winterfront.storm.StormProfile;
 import io.github.usernamec446.winterfront.storm.StormProfiles;
 
@@ -32,7 +34,8 @@ public final class WeatherHelper
     /** Returns whether Winter Front is enabled for this level's registered dimension. */
     public static boolean isWinterDimension(Level level)
     {
-        return level != null && Config.INSTANCE.isWinterDimension(level.dimension());
+        // Clients do not know the server's profiles, and follow the climate the server sent instead.
+        return level != null && (level.isClientSide || StormProfiles.forDimension(level.dimension()) != null);
     }
 
     /** Returns whether this level can actually host sky-driven winter weather. */
@@ -69,9 +72,39 @@ public final class WeatherHelper
         {
             return false;
         }
+        if (level.isClientSide)
+        {
+            return true;
+        }
         // Called from worldgen threads too, so this reads the immutable profile and not saved data.
+        return level.getDayTime() / 24000L >= StormProfiles.forDimension(level.dimension()).firstStormDay();
+    }
+
+    /**
+     * Static winter makes biomes cold from the first day, so vanilla would snow and freeze too
+     * early. Returns whether vanilla's cold-weather effects must be held back at this position.
+     */
+    public static boolean holdsBackColdEffects(LevelReader reader, Level level, BlockPos pos)
+    {
+        if (level.isClientSide || !isWinterBiome(level, pos))
+        {
+            return false;
+        }
+        return !isWinterActive(level) || (!(reader instanceof Level) && !Config.INSTANCE.worldgenFreezeTopLayer.getAsBoolean());
+    }
+
+    /** Returns whether snow may settle here according to the dimension's snow rules. */
+    public static boolean allowsSnowSettling(Level level, BlockPos pos)
+    {
         final StormProfile profile = level.isClientSide ? null : StormProfiles.forDimension(level.dimension());
-        return level.getDayTime() / 24000L >= (profile != null ? profile.firstStormDay() : Config.INSTANCE.snowStartDay.getAsInt());
+        if (profile == null)
+        {
+            return true;
+        }
+        final var rule = profile.biomeRule(level.getBiome(pos));
+        return rule.flatMap(SnowSettings.BiomeRule::accumulation).orElse(profile.snow().accumulation())
+                && pos.getY() >= profile.snow().altitude().minY()
+                && level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, pos) <= profile.snow().maxBlockLight();
     }
 
     /** Returns whether the biome at the position is enabled by the configured biome rules. */
@@ -81,9 +114,10 @@ public final class WeatherHelper
         {
             return false;
         }
-        return level.getBiome(pos).unwrapKey()
-                .map(key -> Config.INSTANCE.isWinterBiome(key.location()))
-                .orElse(false);
+        final Holder<Biome> biome = level.getBiome(pos);
+        return level.isClientSide
+                ? biome.value().getPrecipitationAt(pos) == Biome.Precipitation.SNOW
+                : ClimateConfig.get().isWinterBiome(biome);
     }
 
     /**

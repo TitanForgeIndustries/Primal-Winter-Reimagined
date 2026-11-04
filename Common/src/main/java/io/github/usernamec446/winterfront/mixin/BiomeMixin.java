@@ -23,7 +23,11 @@ public abstract class BiomeMixin
     private void winterfront$shouldFreeze(LevelReader reader, BlockPos pos, CallbackInfoReturnable<Boolean> cir)
     {
         final Level level = WeatherHelper.seasonalLevel(reader);
-        if (level != null && WeatherHelper.isActiveWinterBiome(level, pos))
+        if (level != null && WeatherHelper.holdsBackColdEffects(reader, level, pos))
+        {
+            cir.setReturnValue(false);
+        }
+        else if (level != null && WeatherHelper.isActiveWinterBiome(level, pos))
         {
             cir.setReturnValue(WeatherHelper.canFreeze(reader, pos, true));
         }
@@ -33,7 +37,11 @@ public abstract class BiomeMixin
     private void winterfront$shouldFreezeWithNeighbourCheck(LevelReader reader, BlockPos pos, boolean requireNeighbours, CallbackInfoReturnable<Boolean> cir)
     {
         final Level level = WeatherHelper.seasonalLevel(reader);
-        if (level != null && WeatherHelper.isActiveWinterBiome(level, pos))
+        if (level != null && WeatherHelper.holdsBackColdEffects(reader, level, pos))
+        {
+            cir.setReturnValue(false);
+        }
+        else if (level != null && WeatherHelper.isActiveWinterBiome(level, pos))
         {
             cir.setReturnValue(WeatherHelper.canFreeze(reader, pos, requireNeighbours));
         }
@@ -43,7 +51,15 @@ public abstract class BiomeMixin
     private void winterfront$shouldSnow(LevelReader reader, BlockPos pos, CallbackInfoReturnable<Boolean> cir)
     {
         final Level level = WeatherHelper.seasonalLevel(reader);
-        if (level != null && WeatherHelper.isActiveWinterBiome(level, pos))
+        if (level != null && WeatherHelper.holdsBackColdEffects(reader, level, pos))
+        {
+            cir.setReturnValue(false);
+        }
+        else if (level != null && reader instanceof Level && !WeatherHelper.allowsSnowSettling(level, pos))
+        {
+            cir.setReturnValue(false);
+        }
+        else if (level != null && WeatherHelper.isActiveWinterBiome(level, pos))
         {
             cir.setReturnValue(WeatherHelper.canPlaceSnow(reader, pos));
         }
